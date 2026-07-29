@@ -66,18 +66,6 @@ Cruxible 是一个**确定性的状态引擎**——AI Agent 用它来存结构�
 
 `ConfigEditor` 类提供了对运行中 ontology 的 CRUD 操作，通过 `dump_expanded()` 序列化为 YAML 后经由 `reload_config` 应用。所有修改都经过 Pydantic 校验和引擎约束检查。
 
-### 中文文档与实战文章
-
-`gzh/` 目录下包含了完整的分析和实操文章（均为可直接粘贴到微信公众号编辑器的 HTML 格式）：
-
-| 文件 | 内容 |
-|------|------|
-| `mcp-tools-analysis.md` | 81 个工具全景分析报告 |
-| `practical-integration.html` | 实战：与超级智能体底座集成 |
-| `agent-ontology-v2.html` | 聚焦"业务写本体" |
-| `agent-ontology-article.html` | 初版本体论文章 |
-| `cruxible-deerflow-analysis.md` | 深度分析报告 + 后续规划 |
-| `nebula-integration-proposal.md` | NebulaGraph 集成方案 |
 
 ## 与本 Fork 上游的差异
 
@@ -86,7 +74,6 @@ Cruxible 是一个**确定性的状态引擎**——AI Agent 用它来存结构�
 | 工具总数 | 74 | **81**（新增 7 个） |
 | 本体编辑 | 仅 `reload_config`（全量替换） | **增量编辑**：add/update entity type、relationship、enum |
 | 数据源发现 | 无 | **3 个连接器**：Hive、OceanBase、SFTP |
-| 中文文档 | 无 | **gzh/** 完整中文技术分析 + 公众号文章 |
 | 集成方向 | Agent 状态引擎核心 | **业务写本体** + **超级智能体底座集成** |
 
 ## 快速开始

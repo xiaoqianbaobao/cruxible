@@ -94,8 +94,6 @@ cruxible server start --port 8100
 CRUXIBLE_SERVER_URL=http://127.0.0.1:8100 python -m cruxible_core.mcp.server
 ```
 
-详见 `gzh/` 目录下的实战文章。
-
 ## 许可证
 
 Apache 2.0

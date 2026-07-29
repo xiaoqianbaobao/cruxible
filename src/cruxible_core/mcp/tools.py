@@ -1420,6 +1420,112 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
             edge_key,
         )
 
+    @_tool
+    def cruxible_entity_type_add(
+        instance_id: str,
+        name: str,
+        properties: dict[str, dict[str, Any]] | None = None,
+        description: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Add a new entity type to the ontology."""
+        return handlers.handle_ontology_edit(
+            instance_id, "entity_type_add",
+            name=name, properties=properties, description=description,
+            dry_run=dry_run,
+        )
+
+    @_tool
+    def cruxible_entity_type_update(
+        instance_id: str,
+        name: str,
+        add_properties: dict[str, dict[str, Any]] | None = None,
+        set_description: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Add properties to an existing entity type."""
+        return handlers.handle_ontology_edit(
+            instance_id, "entity_type_update",
+            name=name, add_properties=add_properties,
+            set_description=set_description, dry_run=dry_run,
+        )
+
+    @_tool
+    def cruxible_relationship_add(
+        instance_id: str,
+        name: str,
+        from_entity: str,
+        to_entity: str,
+        cardinality: str = "many_to_many",
+        description: str | None = None,
+        reverse_name: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Add a new relationship between two entity types."""
+        return handlers.handle_ontology_edit(
+            instance_id, "relationship_add",
+            name=name, from_entity=from_entity, to_entity=to_entity,
+            cardinality=cardinality, description=description,
+            reverse_name=reverse_name, dry_run=dry_run,
+        )
+
+    @_tool
+    def cruxible_enum_add(
+        instance_id: str,
+        name: str,
+        values: list[str],
+        ordered: bool = False,
+        description: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Add a new enum vocabulary."""
+        return handlers.handle_ontology_edit(
+            instance_id, "enum_add",
+            name=name, values=values, ordered=ordered,
+            description=description, dry_run=dry_run,
+        )
+
+    @_tool
+    def cruxible_enum_value_add(
+        instance_id: str,
+        name: str,
+        values: list[str],
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Add new values to an existing enum."""
+        return handlers.handle_ontology_edit(
+            instance_id, "enum_value_add",
+            name=name, values=values, dry_run=dry_run,
+        )
+
+    @_tool
+    def cruxible_ontology_describe(
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """Return a human-readable summary of the current ontology."""
+        return handlers.handle_ontology_describe(instance_id)
+
+
+    @_tool
+    def cruxible_discover_schema(
+        source_type: str,
+        host: str | None = None,
+        port: int | None = None,
+        database: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        private_key_path: str | None = None,
+        remote_dir: str | None = None,
+        file_paths: list[str] | None = None,
+        tables: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Connect to a data source (hive, oceanbase, sftp) and discover schema. Returns proposed ontology entity types, relationships, and enums that can be reviewed and applied with cruxible_entity_type_add et al."""
+        return handlers.handle_discover_schema(
+            source_type, host=host, port=port, database=database,
+            user=user, password=password, private_key_path=private_key_path,
+            remote_dir=remote_dir, file_paths=file_paths, tables=tables,
+        )
+
     _publish_union_output_schemas(server)
 
     return registered

@@ -160,6 +160,15 @@ TOOL_PERMISSIONS: dict[str, PermissionMode] = {
     "cruxible_instance_relocate": PermissionMode.ADMIN,
     "cruxible_state_publish": PermissionMode.ADMIN,
     "cruxible_state_create_overlay": PermissionMode.ADMIN,
+
+    # Ontology management tools (GOVERNED_WRITE — mutates config)
+    "cruxible_entity_type_add": PermissionMode.GOVERNED_WRITE,
+    "cruxible_entity_type_update": PermissionMode.GOVERNED_WRITE,
+    "cruxible_relationship_add": PermissionMode.GOVERNED_WRITE,
+    "cruxible_enum_add": PermissionMode.GOVERNED_WRITE,
+    "cruxible_enum_value_add": PermissionMode.GOVERNED_WRITE,
+    "cruxible_ontology_describe": PermissionMode.READ_ONLY,
+    "cruxible_discover_schema": PermissionMode.GOVERNED_WRITE,
 }
 
 # Internal runtime operations that are not registered MCP tools but still need

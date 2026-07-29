@@ -1979,3 +1979,161 @@ def handle_state_pull_apply(
         allow_local=False,
         operation_name="cruxible_state_pull_apply",
     )
+
+def handle_ontology_edit(
+    instance_id: str,
+    action: str,
+    *,
+    name: str | None = None,
+    properties: dict[str, dict[str, Any]] | None = None,
+    add_properties: dict[str, dict[str, Any]] | None = None,
+    set_description: str | None = None,
+    from_entity: str | None = None,
+    to_entity: str | None = None,
+    cardinality: str = "many_to_many",
+    reverse_name: str | None = None,
+    values: list[str] | None = None,
+    ordered: bool = False,
+    description: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Handle ontology edit operations: entity_type_add/update, relationship_add, enum_add/value_add."""
+    from cruxible_core.service.ontology_editor import (
+        service_entity_type_add,
+        service_entity_type_update,
+        service_relationship_add,
+        service_enum_add,
+        service_enum_value_add,
+    )
+
+    def _local_edit() -> dict[str, Any]:
+        instance = get_manager().get(instance_id)
+        service_dispatch = {
+            "entity_type_add": lambda: service_entity_type_add(
+                instance, name, properties=properties, description=description, dry_run=dry_run
+            ),
+            "entity_type_update": lambda: service_entity_type_update(
+                instance, name, add_properties=add_properties,
+                set_description=set_description, dry_run=dry_run
+            ),
+            "relationship_add": lambda: service_relationship_add(
+                instance, name, from_entity, to_entity,
+                cardinality=cardinality, description=description,
+                reverse_name=reverse_name, dry_run=dry_run
+            ),
+            "enum_add": lambda: service_enum_add(
+                instance, name, values or [],
+                ordered=ordered, description=description, dry_run=dry_run
+            ),
+            "enum_value_add": lambda: service_enum_value_add(
+                instance, name, values or [], dry_run=dry_run
+            ),
+        }
+        fn = service_dispatch.get(action)
+        if fn is None:
+            raise ConfigError(f"Unknown ontology edit action: {action}")
+        return fn()
+
+    return _dispatch_remote_or_local(
+        lambda client: client.ontology_edit(instance_id, action, **locals()),
+        _local_edit,
+        allow_local=True,
+        operation_name=f"cruxible_ontology_{action}",
+    )
+
+
+def handle_discover_schema(
+    source_type: str,
+    *,
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    private_key_path: str | None = None,
+    remote_dir: str | None = None,
+    file_paths: list[str] | None = None,
+    tables: list[str] | None = None,
+) -> dict[str, Any]:
+    """Connect to a data source, scan schema, and return proposed ontology changes."""
+    from cruxible_core.connectors import HiveConnector, OceanBaseConnector, SFTPConnector
+    from cruxible_core.connectors.base import convert_to_proposed_ontology
+
+    source_type = source_type.lower()
+    connector = None
+    try:
+        if source_type == "hive":
+            connector = HiveConnector()
+            connector.connect(
+                host=host or "localhost", port=port or 10000,
+                database=database or "default", user=user or "hive",
+                password=password,
+            )
+            result = connector.scan(tables=tables)
+        elif source_type == "oceanbase":
+            connector = OceanBaseConnector()
+            connector.connect(
+                host=host or "localhost", port=port or 2883,
+                database=database or "", user=user or "root",
+                password=password or "",
+            )
+            result = connector.scan(tables=tables)
+        elif source_type == "sftp":
+            connector = SFTPConnector()
+            connector.connect(
+                host=host or "localhost", port=port or 22,
+                user=user or "", password=password,
+                private_key=private_key_path,
+            )
+            result = connector.scan(remote_dir=remote_dir or ".", file_paths=file_paths)
+        else:
+            return {"error": f"Unsupported source type: {source_type}. Supported: hive, oceanbase, sftp"}
+
+        # Convert raw scan to proposed ontology
+        ontology = convert_to_proposed_ontology(result.schema)
+
+        return {
+            "source": source_type,
+            "tables_found": len(result.schema.tables),
+            "relationships_found": len(result.schema.relationships),
+            "proposed_entity_types": {
+                name: {k: v for k, v in defn.items() if k != "properties"}
+                for name, defn in ontology.proposed_entity_types.items()
+            },
+            "proposed_entity_count": len(ontology.proposed_entity_types),
+            "proposed_relationship_count": len(ontology.proposed_relationships),
+            "proposed_enums": list(ontology.proposed_enums.keys()),
+            "entity_type_details": [
+                {"name": name, "properties": list(defn["properties"].keys())}
+                for name, defn in ontology.proposed_entity_types.items()
+            ],
+            "relationship_details": ontology.proposed_relationships,
+            "warnings": ontology.warnings + result.warnings,
+            "message": (
+                f"Discovered {len(result.schema.tables)} tables, "
+                f"{len(ontology.proposed_entity_types)} entity types inferred, "
+                f"{len(ontology.proposed_relationships)} relationships inferred."
+                "Use cruxible_entity_type_add, cruxible_relationship_add, "
+                "and cruxible_enum_add to apply.",
+            ),
+        }
+    finally:
+        if connector:
+            connector.close()
+
+
+def handle_ontology_describe(instance_id: str) -> dict[str, Any]:
+    """Return a human-readable description of the current ontology."""
+    from cruxible_core.service.ontology_editor import service_ontology_describe
+
+    def _local() -> dict[str, Any]:
+        instance = get_manager().get(instance_id)
+        return {"description": service_ontology_describe(instance)}
+
+    return _dispatch_remote_or_local(
+        lambda client: {"description": client.ontology_describe(instance_id)},
+        _local,
+        operation_name="cruxible_ontology_describe",
+    )
+
+

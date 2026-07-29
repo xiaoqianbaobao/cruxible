@@ -1,0 +1,366 @@
+<section style="max-width:677px;margin:0 auto;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#52525B;line-height:1.8;letter-spacing:0.3px;overflow-x:hidden;">
+
+  <!-- 引言卡 -->
+  <section style="margin:10px 10px 40px;padding:32px 24px 24px;border-top:1px solid #E4E4E7;border-bottom:1px solid #E4E4E7;background:#FFFFFF;">
+    <p style="font-size:11px;color:#A1A1AA;letter-spacing:2px;margin:0 0 18px;font-weight:400;">
+      <span leaf="">PRACTICAL</span>
+    </p>
+    <p style="font-size:18px;font-weight:700;color:#27272A;margin:0 0 8px;line-height:1.7;letter-spacing:0.5px;">
+      <span leaf="">从对话到知识图谱：一次完整的 Agent 建本体实战</span>
+    </p>
+    <p style="text-align:right;font-size:12px;color:#A1A1AA;margin:16px 0 0;letter-spacing:1px;">
+      <span leaf="">—— 全链路实操，不画饼</span>
+    </p>
+  </section>
+
+  <!-- 前言 -->
+  <section style="padding:0 10px;">
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">过去的几个月，我和团队在做一个确定性的状态引擎——</span>
+      <strong style="color:#27272A;"><span leaf="">Cruxible</span></strong>
+      <span leaf="">（</span>
+      <span style="background:#F1F5F9;color:#52525B;padding:1px 6px;border-radius:4px;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:14px;"><span leaf="">github.com/xiaoqianbaobao/cruxible</span></span>
+      <span leaf="">）。它不跑 LLM，只做一件事：</span>
+      <span style="border-bottom:2px solid #52525B;font-weight:600;color:#27272A;"><span leaf="">让 AI Agent 拥有结构化、可审计、可治理的长期记忆。</span></span>
+    </p>
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">本文不画架构图、不扯概念。我们完整走一遍从业务对话到知识图谱写入的全链路实操，所有命令都真实可跑。你可以在本地克隆仓库，跟着走一遍。</span>
+    </p>
+  </section>
+
+  <!-- 三栏看点 -->
+  <section style="padding:0 10px 40px;">
+    <p style="font-size:11px;color:#A1A1AA;margin:0 0 16px;letter-spacing:2px;">
+      <span leaf="">本文看点</span>
+    </p>
+    <section style="display:flex;justify-content:space-between;">
+      <section style="flex:1;background:#FAFAFA;border-top:1px solid #E4E4E7;padding:18px 12px 16px;margin-right:8px;">
+        <p style="font-size:11px;color:#A1A1AA;font-weight:500;margin:0 0 8px;letter-spacing:1px;"><span leaf="">01</span></p>
+        <p style="font-size:13px;font-weight:700;color:#27272A;margin:0;line-height:1.5;"><span leaf="">用自然语言建本体：7 个新 MCP 工具实操</span></p>
+      </section>
+      <section style="flex:1;background:#FAFAFA;border-top:1px solid #E4E4E7;padding:18px 12px 16px;margin-right:8px;">
+        <p style="font-size:11px;color:#A1A1AA;font-weight:500;margin:0 0 8px;letter-spacing:1px;"><span leaf="">02</span></p>
+        <p style="font-size:13px;font-weight:700;color:#27272A;margin:0;line-height:1.5;"><span leaf="">从 Hive/OceanBase/SFTP 自动发现本体</span></p>
+      </section>
+      <section style="flex:1;background:#FAFAFA;border-top:1px solid #E4E4E7;padding:18px 12px 16px;">
+        <p style="font-size:11px;color:#A1A1AA;font-weight:500;margin:0 0 8px;letter-spacing:1px;"><span leaf="">03</span></p>
+        <p style="font-size:13px;font-weight:700;color:#27272A;margin:0;line-height:1.5;"><span leaf="">与 DeerFlow 等 Agent 底座的 MCP 集成实战</span></p>
+      </section>
+    </section>
+  </section>
+
+  <!-- 第一章 -->
+  <section style="margin-top:16px;margin-bottom:32px;padding:0 10px;">
+    <section style="position:relative;padding-bottom:20px;border-bottom:1px solid #E4E4E7;">
+      <p style="font-size:48px;font-weight:900;color:#E4E4E7;margin:0;line-height:1;letter-spacing:-2px;">
+        <span leaf="">01</span>
+      </p>
+      <section style="margin-top:-8px;">
+        <p style="font-size:10px;color:#A1A1AA;font-weight:500;letter-spacing:3px;margin:0 0 6px;text-transform:uppercase;">
+          <span leaf="">Natural Language Ontology</span>
+        </p>
+        <h3 style="font-size:20px;font-weight:800;color:#27272A;margin:0;letter-spacing:0.5px;line-height:1.4;">
+          <span leaf="">让业务人员用自然语言定义领域模型</span>
+        </h3>
+      </section>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">之前建本体只有一条路：写 YAML → PR → 上线。每改一个字段都要走一遍。我们在 Cruxible 里加了 6 个增量操作工具，把这条路改成了对话式的：</span>
+    </p>
+
+    <p style="font-size:15px;font-weight:800;color:#27272A;margin:28px 0 14px;padding-left:12px;border-left:3px solid #52525B;line-height:1.4;">
+      <span leaf="">场景：业务说"我们要管项目下的阶段"</span></p>
+
+    <!-- STEP 1 -->
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 1</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">Agent 先看当前本体</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">→ cruxible_ontology_describe(instance_id=...)</span>
+        </p>
+      </section>
+      <p style="font-size:14px;color:#71717A;margin:0;line-height:1.7;">
+        <span leaf="">返回：Entity types: Project, Task, Actor, Decision, Risk / Relationships: 5 / Enums: 4</span>
+      </p>
+    </section>
+
+    <!-- STEP 2 -->
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 2</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">Agent 新增实体</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">→ cruxible_entity_type_add(instance_id, name="Stage",</span>
+        </p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　　properties={"name": {"type": "string"},</span>
+        </p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　　"deadline": {"type": "date", "optional": true}},</span>
+        </p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　　dry_run=True)</span>
+        </p>
+      </section>
+    </section>
+
+    <!-- STEP 3 -->
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 3</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">Agent 新增关系</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">→ cruxible_relationship_add(instance_id,</span>
+        </p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;"><span leaf="">　　name="stage_belongs_to_project",</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;"><span leaf="">　　from_entity="Stage", to_entity="Project",</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;"><span leaf="">　　dry_run=True)</span></p>
+      </section>
+    </section>
+
+    <!-- STEP 4 -->
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 4</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">业务确认，apply 生效</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">→ cruxible_entity_type_add(name="Stage", ..., dry_run=False)</span>
+        </p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">→ cruxible_relationship_add(name="stage_belongs_to_project", ..., dry_run=False)</span>
+        </p>
+      </section>
+      <p style="font-size:14px;color:#71717A;margin:0;line-height:1.7;">
+        <span leaf="">引擎自动校验约束 → 写入知识图谱 → 生成 receipt → 业务可见</span>
+      </p>
+    </section>
+
+    <!-- 金句 -->
+    <section style="border-left:3px solid #52525B;padding:16px 0 16px 24px;margin:0 0 28px;">
+      <p style="font-size:16px;font-weight:700;color:#27272A;margin:0;line-height:1.7;letter-spacing:0.5px;">
+        <span leaf="">「整个过程中，业务人员没有写一行 YAML，没有提一个 PR。Agent 负责翻译自然语言，Cruxible 负责校验和执行。」</span>
+      </p>
+    </section>
+  </section>
+
+  <!-- 分割线 -->
+  <section style="margin:0 auto;width:60px;"><span style="display:block;height:1px;background:#E4E4E7;margin:24px 0 24px;"><span leaf=""><br></span></span></section>
+
+  <!-- 第二章 -->
+  <section style="margin-top:56px;margin-bottom:32px;padding:0 10px;">
+    <section style="position:relative;padding-bottom:20px;border-bottom:1px solid #E4E4E7;">
+      <p style="font-size:48px;font-weight:900;color:#E4E4E7;margin:0;line-height:1;letter-spacing:-2px;">
+        <span leaf="">02</span>
+      </p>
+      <section style="margin-top:-8px;">
+        <p style="font-size:10px;color:#A1A1AA;font-weight:500;letter-spacing:3px;margin:0 0 6px;text-transform:uppercase;">
+          <span leaf="">Schema Discovery</span>
+        </p>
+        <h3 style="font-size:20px;font-weight:800;color:#27272A;margin:0;letter-spacing:0.5px;line-height:1.4;">
+          <span leaf="">从大数据到本体：一键扫描现有数据源</span>
+        </h3>
+      </section>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">大部分团队已经有数据——Hive 表、OceanBase 库、SFTP 上的 CSV 文件。从头建本体不如从现有数据反推。我们加了三个连接器：</span>
+    </p>
+
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">1</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">Hive/Spark</strong>——连接 Hive Metastore，SHOW TABLES → DESCRIBE → 自动推断实体类型、属性、FK 关系。ODS/DWD/DIM 前缀自动剥离。
+        </p>
+      </section>
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">2</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">OceanBase</strong>——同 MySQL 协议，扫描 INFORMATION_SCHEMA，检测主键和外键约束，自动生成 relationship 提案。
+        </p>
+      </section>
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">3</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">SFTP 文件</strong>——远程 CSV/JSON 采样 → 推断列类型和枚举值 → 推荐实体结构。
+        </p>
+      </section>
+    </section>
+
+    <p style="margin-bottom:10px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">调用只有一个工具：</span>
+    </p>
+    <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 22px;">
+      <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+        <span leaf="">→ cruxible_discover_schema(source_type="hive",</span>
+      </p>
+      <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+        <span leaf="">　　host="hive-server", port=10000,</span>
+      </p>
+      <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+        <span leaf="">　　database="default")</span>
+      </p>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">返回结果包含发现的实体类型、属性、关系提案——这些提案不会自动写入，而是交给人或 Agent 审核后，再用上一节的新增工具逐步应用。自底向上（数据→本体）和自顶向下（对话→本体）两条路径都打通了。</span>
+    </p>
+  </section>
+
+  <!-- 分割线 -->
+  <section style="margin:0 auto;width:60px;"><span style="display:block;height:1px;background:#E4E4E7;margin:24px 0 24px;"><span leaf=""><br></span></span></section>
+
+  <!-- 第三章 -->
+  <section style="margin-top:56px;margin-bottom:32px;padding:0 10px;">
+    <section style="position:relative;padding-bottom:20px;border-bottom:1px solid #E4E4E7;">
+      <p style="font-size:48px;font-weight:900;color:#E4E4E7;margin:0;line-height:1;letter-spacing:-2px;">
+        <span leaf="">03</span>
+      </p>
+      <section style="margin-top:-8px;">
+        <p style="font-size:10px;color:#A1A1AA;font-weight:500;letter-spacing:3px;margin:0 0 6px;text-transform:uppercase;">
+          <span leaf="">MCP Integration</span>
+        </p>
+        <h3 style="font-size:20px;font-weight:800;color:#27272A;margin:0;letter-spacing:0.5px;line-height:1.4;">
+          <span leaf="">与超级智能体底座的 MCP 集成</span>
+        </h3>
+      </section>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">Cruxible 的 81 个工具全部注册为 MCP（Model Context Protocol）服务。任何支持 MCP 的 Agent 底座——包括开源项目 DeerFlow——都可以直接使用这些工具。</span>
+    </p>
+
+    <p style="font-size:15px;font-weight:800;color:#27272A;margin:28px 0 14px;padding-left:12px;border-left:3px solid #52525B;line-height:1.4;">
+      <span leaf="">集成只需要两步</span>
+    </p>
+
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 1</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">启动 Cruxible Daemon</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">$ cruxible server start --port 8100</span></p>
+      </section>
+      <p style="font-size:14px;color:#71717A;margin:0 0 14px;line-height:1.7;">
+        <span leaf="">Daemon 在 :8100 监听 HTTP REST API，管理所有实例和持久化。</span>
+      </p>
+    </section>
+
+    <section style="margin-bottom:14px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="display:inline-block;background:#27272A;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;"><span leaf="">STEP 2</span></span>
+        <span style="font-size:15px;font-weight:800;color:#27272A;"><span leaf="">在 Agent 底座配置 MCP Server</span></span>
+      </section>
+      <section style="background:#FAFAFA;border:1px solid #E4E4E7;padding:14px 16px;margin:0 0 10px;">
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf=""># extensions_config.json</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">{"mcpServers": {</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　"cruxible": {</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　　"command": "python3 -m cruxible_core.mcp.server",</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　　"env": {"CRUXIBLE_SERVER_URL": "http://host:8100"}</span></p>
+        <p style="margin:0;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#3F3F46;">
+          <span leaf="">　}}}</span></p>
+      </section>
+      <p style="font-size:14px;color:#71717A;margin:0;line-height:1.7;">
+        <span leaf="">Agent 底座自动发现 81 个工具，Agent 在规划时就能看到全部工具清单。</span>
+      </p>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">对于 Docker 部署的底座（如 DeerFlow），只需在容器内安装 </span>
+      <span style="background:#F1F5F9;color:#52525B;padding:1px 6px;border-radius:4px;font-family:'SF Mono',Consolas,Monaco,monospace;font-size:14px;"><span leaf="">cruxible-core</span></span>
+      <span leaf=""> 并将 CRUXIBLE_SERVER_URL 指向宿主机的 daemon。Agent 通过 MCP stdio 管道与 Cruxible 通信——不是 HTTP，而是标准输入输出，零网络开销。</span>
+    </p>
+  </section>
+
+  <!-- 分割线 -->
+  <section style="margin:0 auto;width:60px;"><span style="display:block;height:1px;background:#E4E4E7;margin:24px 0 24px;"><span leaf=""><br></span></span></section>
+
+  <!-- ∞ 结语 -->
+  <section style="margin-top:56px;margin-bottom:32px;padding:0 10px;">
+    <section style="position:relative;padding-bottom:20px;border-bottom:1px solid #E4E4E7;">
+      <p style="font-size:48px;font-weight:900;color:#E4E4E7;margin:0;line-height:1;letter-spacing:-2px;">
+        <span leaf="">∞</span>
+      </p>
+      <section style="margin-top:-8px;">
+        <p style="font-size:10px;color:#A1A1AA;font-weight:500;letter-spacing:3px;margin:0 0 6px;text-transform:uppercase;">
+          <span leaf="">Roadmap</span>
+        </p>
+        <h3 style="font-size:20px;font-weight:800;color:#27272A;margin:0;letter-spacing:0.5px;line-height:1.4;">
+          <span leaf="">后续规划</span>
+        </h3>
+      </section>
+    </section>
+
+    <p style="margin-bottom:22px;font-size:15px;line-height:1.8;text-align:justify;color:#52525B;letter-spacing:0.3px;">
+      <span leaf="">81 个工具、3 个数据源连接器、6 个本体编辑工具——这是当前的状态。后续计划分三阶段：</span>
+    </p>
+
+    <section style="margin-bottom:12px;">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">1</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">生产化部署</strong>——daemon 稳定性、CRUXIBLE_MODE 权限分级、Agent 工具调用监控
+        </p>
+      </section>
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">2</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">治理反馈闭环</strong>——完整的 propose → evaluate → feedback → resolve 链路，让每个 Agent 写图的动作都经过确定性检查和人工兜底
+        </p>
+      </section>
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#27272A;color:#fff;font-size:12px;font-weight:700;border-radius:50%;flex-shrink:0;margin-top:2px;"><span leaf="">3</span></span>
+        <p style="font-size:15px;color:#52525B;margin:0;line-height:1.8;flex:1;">
+          <strong style="color:#27272A;">规模化扩展</strong>——NebulaGraph 后端集成、跨实例联邦查询、连接器插件化
+        </p>
+      </section>
+    </section>
+
+    <!-- 居中金句 -->
+    <p style="font-size:15px;margin:0 10px 24px;text-align:center;color:#27272A;font-weight:700;letter-spacing:1px;border-top:1px solid #E4E4E7;border-bottom:1px solid #E4E4E7;padding:14px 10px;">
+      <span leaf="">81 个工具，只是起点。<br>当 Agent 能自己发现本体、编辑本体、并经过治理写入知识图谱时，<br>我们才真正解决了 Agent 的"失忆症"。</span>
+    </p>
+  </section>
+
+  <!-- END -->
+  <section style="padding:0 10px 20px;">
+    <section style="border-top:1px solid #E4E4E7;padding-top:0;">
+      <p style="text-align:center;font-size:11px;color:#A1A1AA;letter-spacing:3px;margin:0;transform:translateY(-10px);background:#FFFFFF;display:inline-block;padding:0 16px;">
+        <span leaf="">END</span>
+      </p>
+    </section>
+  </section>
+
+  <!-- 签名 -->
+  <section style="padding:0 10px 24px;">
+    <section style="border-top:1px solid #E4E4E7;padding-top:28px;">
+      <p style="margin-bottom:16px;font-size:15px;line-height:1.8;color:#52525B;text-align:justify;">
+        <span leaf="">本文涉及的代码和完整配置已开源到</span>
+        <strong style="color:#27272A;"><span leaf="">github.com/xiaoqianbaobao/cruxible</span></strong>
+        <span leaf="">，欢迎 Star 和 PR。</span>
+      </p>
+      <p style="margin-bottom:0;font-size:15px;line-height:1.8;color:#52525B;text-align:justify;">
+        <span leaf="">如果你觉得有收获，欢迎</span>
+        <strong style="color:#27272A;"><span leaf="">点赞、在看、转发</span></strong>
+        <span leaf="">三连。</span>
+      </p>
+    </section>
+  </section>
+</section>

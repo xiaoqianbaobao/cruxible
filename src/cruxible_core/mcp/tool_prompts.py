@@ -323,6 +323,43 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "Use when you need the provenance, review state, feedback, and receipts for "
         "one relationship."
     ),
+    "cruxible_entity_type_add": (
+        "Use when a business user describes a new kind of entity that should be "
+        "tracked in the graph — for example 'we also need to track Sprints'. "
+        "Provide the entity type name, optional properties, and description."
+    ),
+    "cruxible_entity_type_update": (
+        "Use when a business user wants to add new attributes to an existing "
+        "entity type — for example 'add a deadline field to Task'. Provide "
+        "the entity type name and the new properties to add."
+    ),
+    "cruxible_relationship_add": (
+        "Use when a business user describes how two entity types connect — "
+        "for example 'a Sprint belongs to a Project'. Provide the relationship "
+        "name, source and target entity types."
+    ),
+    "cruxible_enum_add": (
+        "Use when a business user defines a set of allowed values for a property "
+        "— for example 'severity: P0, P1, P2, P3'. Provide the enum name and "
+        "value list."
+    ),
+    "cruxible_enum_value_add": (
+        "Use when a business user needs to extend an existing enum with new "
+        "options — for example 'add urgent to priority'. Provide the enum "
+        "name and the new values."
+    ),
+    "cruxible_ontology_describe": (
+        "Use when an agent or user wants a high-level summary of the current "
+        "ontology — what entity types, relationships, and enums are defined."
+    ),
+    "cruxible_discover_schema": (
+        "Use when you need to reverse-engineer an ontology from an existing "
+        "data source. Connect to Hive, OceanBase, or SFTP, scan tables/files, "
+        "and get proposed entity types, relationships, and enums. The result "
+        "is NOT automatically applied — present it for review and apply with "
+        "cruxible_entity_type_add, cruxible_relationship_add, and "
+        "cruxible_enum_add."
+    ),
 }
 
 

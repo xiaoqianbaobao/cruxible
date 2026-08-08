@@ -1,0 +1,13 @@
+config_version: 1
+
+sandbox:
+  use: deerflow.sandbox.local:LocalSandboxProvider
+  allow_host_bash: false
+
+checkpointer:
+  type: sqlite
+  connection_string: checkpoints.db
+
+models: []
+tools: []
+tool_groups: []

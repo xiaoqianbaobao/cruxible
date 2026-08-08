@@ -1,0 +1,72 @@
+name: deerflow_poc
+description: "POC: ingest DeerFlow thread state into Cruxible"
+
+entity_types:
+  DeerflowThread:
+    description: A DeerFlow thread.
+    properties:
+      thread_id:
+        type: string
+        primary_key: true
+      title:
+        type: string
+      metadata:
+        type: json
+      created_at:
+        type: datetime
+      updated_at:
+        type: datetime
+
+  DeerflowMessage:
+    description: A serialized message object from DeerFlow thread state.
+    properties:
+      message_id:
+        type: string
+        primary_key: true
+      thread_id:
+        type: string
+        indexed: true
+      role:
+        type: string
+      content:
+        type: string
+      position:
+        type: int
+      raw:
+        type: json
+
+relationships:
+  - name: thread_has_message
+    from: DeerflowThread
+    to: DeerflowMessage
+    cardinality: one_to_many
+    properties:
+      position:
+        type: int
+
+named_queries:
+  threads:
+    mode: collection
+    description: List DeerFlow threads ingested by the POC.
+    returns: DeerflowThread
+    result_shape: entity
+    select:
+      thread_id: $result.entity_id
+      title: $result.properties.title
+      updated_at: $result.properties.updated_at
+    order: updated_at desc datetime
+    limit: 50
+
+  messages:
+    mode: collection
+    description: List DeerFlow messages ingested by the POC.
+    returns: DeerflowMessage
+    result_shape: entity
+    select:
+      message_id: $result.entity_id
+      thread_id: $result.properties.thread_id
+      role: $result.properties.role
+      content: $result.properties.content
+      position: $result.properties.position
+    order: position asc number
+    limit: 200

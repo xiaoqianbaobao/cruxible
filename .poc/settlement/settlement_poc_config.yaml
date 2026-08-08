@@ -1,0 +1,546 @@
+name: settlement_reconciliation_poc
+description: "POC: complex reconciliation + settlement + reporting domain ingested from DeerFlow thread state"
+
+entity_types:
+  DeerflowThread:
+    description: A DeerFlow thread.
+    properties:
+      thread_id:
+        type: string
+        primary_key: true
+      title:
+        type: string
+      metadata:
+        type: json
+      created_at:
+        type: datetime
+      updated_at:
+        type: datetime
+
+  DeerflowMessage:
+    description: A serialized message object from DeerFlow thread state.
+    properties:
+      message_id:
+        type: string
+        primary_key: true
+      thread_id:
+        type: string
+        indexed: true
+      role:
+        type: string
+      content:
+        type: string
+      position:
+        type: int
+      raw:
+        type: json
+
+  Merchant:
+    description: A merchant participating in settlement and reconciliation.
+    properties:
+      merchant_id:
+        type: string
+        primary_key: true
+      name:
+        type: string
+      country:
+        type: string
+      industry:
+        type: string
+      risk_level:
+        type: string
+      active:
+        type: bool
+      created_at:
+        type: datetime
+
+  Channel:
+    description: A payment channel / acquirer.
+    properties:
+      channel_id:
+        type: string
+        primary_key: true
+      name:
+        type: string
+      channel_type:
+        type: string
+      country:
+        type: string
+      settlement_cycle:
+        type: string
+
+  Account:
+    description: A ledger or settlement account.
+    properties:
+      account_id:
+        type: string
+        primary_key: true
+      merchant_id:
+        type: string
+        indexed: true
+      currency:
+        type: string
+      account_type:
+        type: string
+      bank_name:
+        type: string
+      opened_at:
+        type: datetime
+
+  FeeRule:
+    description: A fee rule applied to orders.
+    properties:
+      fee_rule_id:
+        type: string
+        primary_key: true
+      name:
+        type: string
+      rule_type:
+        type: string
+      rate:
+        type: float
+      fixed_fee:
+        type: float
+      currency:
+        type: string
+      effective_from:
+        type: date
+      effective_to:
+        type: date
+
+  FXRate:
+    description: FX rate used to convert transfer amounts.
+    properties:
+      fx_rate_id:
+        type: string
+        primary_key: true
+      pair:
+        type: string
+      rate:
+        type: float
+      as_of:
+        type: datetime
+      provider:
+        type: string
+
+  PaymentOrder:
+    description: A payment order created by a merchant through a channel.
+    properties:
+      order_id:
+        type: string
+        primary_key: true
+      merchant_id:
+        type: string
+        indexed: true
+      channel_id:
+        type: string
+        indexed: true
+      amount:
+        type: float
+      currency:
+        type: string
+      status:
+        type: string
+      created_at:
+        type: datetime
+      settled_at:
+        type: datetime
+      external_ref:
+        type: string
+
+  Transfer:
+    description: A money movement corresponding to an order.
+    properties:
+      transfer_id:
+        type: string
+        primary_key: true
+      order_id:
+        type: string
+        indexed: true
+      direction:
+        type: string
+      amount:
+        type: float
+      currency:
+        type: string
+      executed_at:
+        type: datetime
+      status:
+        type: string
+
+  LedgerEntry:
+    description: A ledger posting line item.
+    properties:
+      ledger_entry_id:
+        type: string
+        primary_key: true
+      account_id:
+        type: string
+        indexed: true
+      order_id:
+        type: string
+        indexed: true
+      entry_type:
+        type: string
+      amount:
+        type: float
+      currency:
+        type: string
+      posted_at:
+        type: datetime
+      batch_id:
+        type: string
+        indexed: true
+
+  SettlementBatch:
+    description: A settlement batch produced by a channel.
+    properties:
+      settlement_batch_id:
+        type: string
+        primary_key: true
+      channel_id:
+        type: string
+        indexed: true
+      cycle_date:
+        type: date
+      currency:
+        type: string
+      total_amount:
+        type: float
+      status:
+        type: string
+      generated_at:
+        type: datetime
+      paid_at:
+        type: datetime
+
+  ReconcileRun:
+    description: A reconcile run executed for a settlement batch.
+    properties:
+      reconcile_run_id:
+        type: string
+        primary_key: true
+      batch_id:
+        type: string
+        indexed: true
+      run_type:
+        type: string
+      started_at:
+        type: datetime
+      completed_at:
+        type: datetime
+      status:
+        type: string
+
+  ReconcileLine:
+    description: A per-order reconciliation line item with expected vs actual comparisons.
+    properties:
+      reconcile_line_id:
+        type: string
+        primary_key: true
+      run_id:
+        type: string
+        indexed: true
+      order_id:
+        type: string
+        indexed: true
+      expected_amount:
+        type: float
+      actual_amount:
+        type: float
+      diff_amount:
+        type: float
+      diff_reason:
+        type: string
+      severity:
+        type: string
+      resolved:
+        type: bool
+
+  Dispute:
+    description: Dispute/chargeback/refund case tied to an order.
+    properties:
+      dispute_id:
+        type: string
+        primary_key: true
+      order_id:
+        type: string
+        indexed: true
+      dispute_type:
+        type: string
+      opened_at:
+        type: datetime
+      closed_at:
+        type: datetime
+      status:
+        type: string
+      amount:
+        type: float
+      currency:
+        type: string
+      reason_code:
+        type: string
+
+  Report:
+    description: A generated report artifact for a batch.
+    properties:
+      report_id:
+        type: string
+        primary_key: true
+      batch_id:
+        type: string
+        indexed: true
+      report_type:
+        type: string
+      generated_at:
+        type: datetime
+      uri:
+        type: string
+
+  Approval:
+    description: An approval action for a report.
+    properties:
+      approval_id:
+        type: string
+        primary_key: true
+      report_id:
+        type: string
+        indexed: true
+      approver:
+        type: string
+      decision:
+        type: string
+      decided_at:
+        type: datetime
+      comment:
+        type: string
+
+  AuditEvent:
+    description: An audit event emitted by the reconciliation workflow.
+    properties:
+      audit_event_id:
+        type: string
+        primary_key: true
+      event_type:
+        type: string
+      actor:
+        type: string
+      occurred_at:
+        type: datetime
+      payload:
+        type: json
+
+relationships:
+  - name: thread_has_message
+    from: DeerflowThread
+    to: DeerflowMessage
+    cardinality: one_to_many
+    properties:
+      position:
+        type: int
+
+  - name: thread_produced_batch
+    from: DeerflowThread
+    to: SettlementBatch
+    cardinality: many_to_many
+
+  - name: merchant_uses_channel
+    from: Merchant
+    to: Channel
+    cardinality: many_to_many
+
+  - name: merchant_owns_account
+    from: Merchant
+    to: Account
+    cardinality: one_to_many
+
+  - name: channel_settles_to_account
+    from: Channel
+    to: Account
+    cardinality: one_to_many
+
+  - name: order_for_merchant
+    from: PaymentOrder
+    to: Merchant
+    cardinality: many_to_one
+
+  - name: order_via_channel
+    from: PaymentOrder
+    to: Channel
+    cardinality: many_to_one
+
+  - name: order_paid_by_transfer
+    from: PaymentOrder
+    to: Transfer
+    cardinality: one_to_many
+
+  - name: transfer_used_fx_rate
+    from: Transfer
+    to: FXRate
+    cardinality: many_to_one
+
+  - name: transfer_posts_ledger_entry
+    from: Transfer
+    to: LedgerEntry
+    cardinality: one_to_many
+
+  - name: ledger_entry_for_order
+    from: LedgerEntry
+    to: PaymentOrder
+    cardinality: many_to_one
+
+  - name: ledger_entry_to_account
+    from: LedgerEntry
+    to: Account
+    cardinality: many_to_one
+
+  - name: ledger_entry_in_batch
+    from: LedgerEntry
+    to: SettlementBatch
+    cardinality: many_to_one
+
+  - name: batch_for_channel
+    from: SettlementBatch
+    to: Channel
+    cardinality: many_to_one
+
+  - name: batch_reconciled_by_run
+    from: SettlementBatch
+    to: ReconcileRun
+    cardinality: one_to_many
+
+  - name: run_has_line
+    from: ReconcileRun
+    to: ReconcileLine
+    cardinality: one_to_many
+
+  - name: line_for_order
+    from: ReconcileLine
+    to: PaymentOrder
+    cardinality: many_to_one
+
+  - name: line_flags_dispute
+    from: ReconcileLine
+    to: Dispute
+    cardinality: many_to_one
+
+  - name: dispute_on_order
+    from: Dispute
+    to: PaymentOrder
+    cardinality: many_to_one
+
+  - name: order_applied_fee_rule
+    from: PaymentOrder
+    to: FeeRule
+    cardinality: many_to_one
+
+  - name: report_for_batch
+    from: Report
+    to: SettlementBatch
+    cardinality: many_to_one
+
+  - name: approval_for_report
+    from: Approval
+    to: Report
+    cardinality: many_to_one
+
+  - name: audit_on_order
+    from: AuditEvent
+    to: PaymentOrder
+    cardinality: many_to_one
+
+  - name: audit_on_batch
+    from: AuditEvent
+    to: SettlementBatch
+    cardinality: many_to_one
+
+  - name: audit_on_dispute
+    from: AuditEvent
+    to: Dispute
+    cardinality: many_to_one
+
+named_queries:
+  settlement_batches:
+    mode: collection
+    description: List settlement batches.
+    returns: SettlementBatch
+    result_shape: entity
+    select:
+      settlement_batch_id: $result.entity_id
+      channel_id: $result.properties.channel_id
+      cycle_date: $result.properties.cycle_date
+      currency: $result.properties.currency
+      total_amount: $result.properties.total_amount
+      status: $result.properties.status
+    order: cycle_date desc date
+    limit: 200
+
+  payment_orders:
+    mode: collection
+    description: List payment orders.
+    returns: PaymentOrder
+    result_shape: entity
+    select:
+      order_id: $result.entity_id
+      merchant_id: $result.properties.merchant_id
+      channel_id: $result.properties.channel_id
+      amount: $result.properties.amount
+      currency: $result.properties.currency
+      status: $result.properties.status
+      created_at: $result.properties.created_at
+    order: created_at desc datetime
+    limit: 200
+
+  batch_to_merchants:
+    mode: traversal
+    description: Traverse a settlement batch to involved merchants (batch -> ledger -> order -> merchant).
+    entry_point: SettlementBatch
+    traversal:
+      - relationship: ledger_entry_in_batch
+        direction: incoming
+        as: ledger
+      - relationship: ledger_entry_for_order
+        as: order
+      - relationship: order_for_merchant
+        as: merchant
+    returns: Merchant
+    result_shape: path
+    dedupe: path
+    max_paths: 20000
+    max_paths_per_result: 20000
+
+  batch_to_disputes:
+    mode: traversal
+    description: Traverse a settlement batch to disputes (batch -> run -> line -> dispute).
+    entry_point: SettlementBatch
+    traversal:
+      - relationship: batch_reconciled_by_run
+        as: run
+      - relationship: run_has_line
+        as: line
+      - relationship: line_flags_dispute
+        as: dispute
+        required: false
+    returns: Dispute
+    result_shape: path
+    dedupe: path
+    max_paths: 20000
+    max_paths_per_result: 20000
+
+  merchant_to_disputes:
+    mode: traversal
+    description: Traverse a merchant to disputes via orders (merchant <- order <- dispute).
+    entry_point: Merchant
+    traversal:
+      - relationship: order_for_merchant
+        direction: incoming
+        as: order
+      - relationship: dispute_on_order
+        direction: incoming
+        as: dispute
+        required: false
+    returns: Dispute
+    result_shape: path
+    dedupe: path
+    max_paths: 20000
+    max_paths_per_result: 20000

@@ -1,0 +1,20 @@
+services:
+  mysql:
+    image: mariadb:11
+    container_name: cruxible-poc-mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: cruxible
+      MARIADB_DATABASE: deerflow_poc
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pcruxible"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mysql-data:

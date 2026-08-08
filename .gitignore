@@ -38,4 +38,21 @@ docs/llms-full.txt
 
 # Local POC runtime state / daemon cache: never ship
 .poc/cruxible_server_state/
+.poc/_tmp_instances/
+.poc/deerflow_instance/
+.poc/settlement/out/
 .cruxible-mcp-command.json
+
+# Ad-hoc local scripts used during engineering: one-off refactors / smoke tests.
+scripts/append_tools_docstrings_default_instance.py
+scripts/apply_default_instance_fallback.py
+scripts/fix_tools_close_paren_indent.py
+scripts/fix_tools_param_indent.py
+scripts/fix_tools_signature_order.py
+scripts/reorder_tools_instance_id_optional.py
+scripts/rewrite_handlers_default_instance.py
+scripts/smoke_test_client_default_instance.py
+scripts/smoke_test_default_instance.py
+scripts/update_tools_docstrings_default_instance.py
+scripts/update_tools_instance_id_optional.py
+scripts/update_tools_instance_id_optional2.py

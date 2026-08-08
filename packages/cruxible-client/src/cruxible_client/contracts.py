@@ -1275,6 +1275,8 @@ class ServerInfoResult(BaseModel):
     instance_count: int
     auth_enabled: bool
     auth_required: bool
+    default_instance_id: str | None = None
+    permission_mode: str | None = None
 
 
 class ServerRestartResult(BaseModel):

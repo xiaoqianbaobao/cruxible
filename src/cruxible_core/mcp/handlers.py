@@ -20,6 +20,10 @@ from cruxible_core.config.loader import load_config
 from cruxible_core.config.provenance import compose_file_with_source_manifest
 from cruxible_core.errors import ConfigError
 from cruxible_core.mcp import working_set as _working_set_capture
+from cruxible_core.mcp.default_instance import (
+    ENV_DEFAULT_INSTANCE_ID,
+    resolve_default_instance_id,
+)
 from cruxible_core.runtime import api
 from cruxible_core.runtime.instance_manager import (
     InstanceManager,
@@ -272,10 +276,11 @@ def handle_create_state_overlay(
 
 
 def handle_workflow_lock(instance_id: str, force: bool = False) -> contracts.WorkflowLockResult:
-    """Generate a workflow lock file for an instance."""
+    """Generate the workflow lock file for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.workflow_lock(instance_id, force=force),
-        lambda: api.workflow_lock(instance_id, force=force),
+        lambda client: client.workflow_lock(resolved, force=force),
+        lambda: api.workflow_lock(resolved, force=force),
     )
 
 
@@ -285,14 +290,15 @@ def handle_workflow_plan(
     input_payload: dict[str, Any] | None = None,
 ) -> contracts.WorkflowPlanResult:
     """Compile a configured workflow plan."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.workflow_plan(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             input_payload=input_payload or {},
         ),
         lambda: api.workflow_plan(
-            instance_id,
+            resolved,
             workflow_name,
             input_payload,
         ),
@@ -306,18 +312,19 @@ def handle_workflow_run(
     decision_record_id: str | None = None,
 ) -> contracts.WorkflowRunResult:
     """Execute a configured workflow."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     decision_kwargs: dict[str, Any] = (
         {"decision_record_id": decision_record_id} if decision_record_id is not None else {}
     )
     return _dispatch_remote_or_local(
         lambda client: client.workflow_run(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             input_payload=input_payload or {},
             **decision_kwargs,
         ),
         lambda: api.workflow_run(
-            instance_id,
+            resolved,
             workflow_name,
             input_payload,
             decision_record_id=decision_record_id,
@@ -338,12 +345,13 @@ def handle_workflow_apply(
     decision_record_id: str | None = None,
 ) -> contracts.WorkflowApplyResult:
     """Commit a previously previewed canonical workflow after verifying identity."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     decision_kwargs: dict[str, Any] = (
         {"decision_record_id": decision_record_id} if decision_record_id is not None else {}
     )
     return _dispatch_remote_or_local(
         lambda client: client.workflow_apply(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             expected_apply_digest=expected_apply_digest,
             expected_head_snapshot_id=expected_head_snapshot_id,
@@ -351,7 +359,7 @@ def handle_workflow_apply(
             **decision_kwargs,
         ),
         lambda: api.workflow_apply(
-            instance_id,
+            resolved,
             workflow_name,
             expected_apply_digest,
             expected_head_snapshot_id,
@@ -369,9 +377,10 @@ def handle_workflow_test(
     name: str | None = None,
 ) -> contracts.WorkflowTestResult:
     """Run configured workflow tests for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.workflow_test(instance_id, name=name),
-        lambda: api.workflow_test(instance_id, name),
+        lambda client: client.workflow_test(resolved, name=name),
+        lambda: api.workflow_test(resolved, name),
         allow_local=False,
         operation_name="cruxible_test_workflow",
     )
@@ -384,18 +393,19 @@ def handle_propose_workflow(
     decision_record_id: str | None = None,
 ) -> contracts.WorkflowProposeResult:
     """Execute a workflow and create a governed relationship proposal."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     decision_kwargs: dict[str, Any] = (
         {"decision_record_id": decision_record_id} if decision_record_id is not None else {}
     )
     return _dispatch_remote_or_local(
         lambda client: client.propose_workflow(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             input_payload=input_payload or {},
             **decision_kwargs,
         ),
         lambda: api.propose_workflow(
-            instance_id,
+            resolved,
             workflow_name,
             input_payload,
             decision_record_id=decision_record_id,
@@ -418,11 +428,12 @@ def handle_query(
     layout: contracts.QueryLayout = "rows",
 ) -> contracts.QueryToolResult | contracts.QueryGraphToolResult:
     """Execute a named query."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: _client_query(
             client,
-            instance_id=instance_id,
+            instance_id=resolved,
             query_name=query_name,
             params=params,
             limit=limit,
@@ -433,7 +444,7 @@ def handle_query(
             layout=layout,
         ),
         lambda: api.query(
-            instance_id,
+            resolved,
             query_name,
             params,
             limit=limit,
@@ -445,7 +456,7 @@ def handle_query(
             layout=layout,
         ),
     )
-    return _captured_read(result, tool="cruxible_query", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_query", instance_id=resolved)
 
 
 def handle_query_inline(
@@ -459,10 +470,11 @@ def handle_query_inline(
     layout: contracts.QueryLayout = "rows",
 ) -> contracts.QueryToolResult | contracts.QueryGraphToolResult:
     """Execute a bounded inline query definition without persisting it to config."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: client.query_inline(
-            instance_id,
+            resolved,
             definition,
             params,
             limit=limit,
@@ -474,7 +486,7 @@ def handle_query_inline(
             **({"layout": layout} if layout == "graph" else {}),
         ),
         lambda: api.query_inline(
-            instance_id,
+            resolved,
             definition,
             params,
             limit=limit,
@@ -485,7 +497,7 @@ def handle_query_inline(
             layout=layout,
         ),
     )
-    return _captured_read(result, tool="cruxible_query_inline", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_query_inline", instance_id=resolved)
 
 
 def _client_query(
@@ -558,16 +570,17 @@ def handle_list_queries(
     continuation: str | None = None,
 ) -> contracts.QueryListResult | contracts.QueryListDetailResult:
     """List named-query definitions for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_queries(
-            instance_id,
+            resolved,
             detail=detail,
             limit=limit,
             offset=offset,
             continuation=continuation,
         ),
         lambda: api.list_queries(
-            instance_id,
+            resolved,
             detail=detail,
             limit=limit,
             offset=offset,
@@ -583,16 +596,17 @@ def handle_create_decision_record(
     subject_id: str | None = None,
     opened_by: str = "human",
 ) -> contracts.DecisionRecordResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.create_decision_record(
-            instance_id,
+            resolved,
             question=question,
             subject_type=subject_type,
             subject_id=subject_id,
             opened_by=opened_by,
         ),
         lambda: api.create_decision_record(
-            instance_id,
+            resolved,
             question=question,
             subject_type=subject_type,
             subject_id=subject_id,
@@ -608,14 +622,15 @@ def handle_get_decision_record(
     decision_record_id: str,
     include_events: bool = True,
 ) -> contracts.DecisionRecordResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.get_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             include_events=include_events,
         ),
         lambda: api.get_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             include_events=include_events,
         ),
@@ -631,9 +646,10 @@ def handle_list_decision_records(
     limit: int = 100,
     offset: int = 0,
 ) -> contracts.DecisionRecordListResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_decision_records(
-            instance_id,
+            resolved,
             status=status,
             subject_type=subject_type,
             subject_id=subject_id,
@@ -642,7 +658,7 @@ def handle_list_decision_records(
             offset=offset,
         ),
         lambda: api.list_decision_records(
-            instance_id,
+            resolved,
             status=status,
             subject_type=subject_type,
             subject_id=subject_id,
@@ -662,9 +678,10 @@ def handle_list_decision_events(
     limit: int = 100,
     offset: int = 0,
 ) -> contracts.DecisionEventListResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_decision_events(
-            instance_id,
+            resolved,
             decision_record_id=decision_record_id,
             receipt_id=receipt_id,
             trace_id=trace_id,
@@ -673,7 +690,7 @@ def handle_list_decision_events(
             offset=offset,
         ),
         lambda: api.list_decision_events(
-            instance_id,
+            resolved,
             decision_record_id=decision_record_id,
             receipt_id=receipt_id,
             trace_id=trace_id,
@@ -691,16 +708,17 @@ def handle_finalize_decision_record(
     decision_class: contracts.DecisionClass,
     rationale: str = "",
 ) -> contracts.DecisionRecordResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.finalize_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             final_decision=final_decision,
             decision_class=decision_class,
             rationale=rationale,
         ),
         lambda: api.finalize_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             final_decision=final_decision,
             decision_class=decision_class,
@@ -716,14 +734,15 @@ def handle_abandon_decision_record(
     decision_record_id: str,
     reason: str = "",
 ) -> contracts.DecisionRecordResult:
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.abandon_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             reason=reason,
         ),
         lambda: api.abandon_decision_record(
-            instance_id,
+            resolved,
             decision_record_id,
             reason=reason,
         ),
@@ -737,25 +756,28 @@ def handle_describe_query(
     query_name: str,
 ) -> contracts.NamedQueryInfoResult:
     """Describe one named-query surface for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.describe_query(instance_id, query_name),
-        lambda: api.describe_query(instance_id, query_name),
+        lambda client: client.describe_query(resolved, query_name),
+        lambda: api.describe_query(resolved, query_name),
     )
 
 
 def handle_receipt(instance_id: str, receipt_id: str) -> dict[str, Any]:
     """Retrieve a stored receipt by ID."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.receipt(instance_id, receipt_id),
-        lambda: api.receipt(instance_id, receipt_id),
+        lambda client: client.receipt(resolved, receipt_id),
+        lambda: api.receipt(resolved, receipt_id),
     )
 
 
 def handle_get_trace(instance_id: str, trace_id: str) -> dict[str, Any]:
     """Retrieve a stored provider execution trace by ID."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.get_trace(instance_id, trace_id),
-        lambda: api.get_trace(instance_id, trace_id),
+        lambda client: client.get_trace(resolved, trace_id),
+        lambda: api.get_trace(resolved, trace_id),
     )
 
 
@@ -767,16 +789,17 @@ def handle_list_traces(
     offset: int = 0,
 ) -> contracts.TraceListResult:
     """List stored provider execution trace summaries."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_traces(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             provider_name=provider_name,
             limit=limit,
             offset=offset,
         ),
         lambda: api.list_traces(
-            instance_id,
+            resolved,
             workflow_name=workflow_name,
             provider_name=provider_name,
             limit=limit,
@@ -803,9 +826,10 @@ def handle_feedback(
     group_override: bool = False,
 ) -> contracts.FeedbackResult:
     """Record feedback on an edge."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.feedback(
-            instance_id,
+            resolved,
             receipt_id=receipt_id,
             action=action,
             source=source,
@@ -822,7 +846,7 @@ def handle_feedback(
             group_override=group_override,
         ),
         lambda: api.feedback(
-            instance_id=instance_id,
+            instance_id=resolved,
             receipt_id=receipt_id,
             action=action,
             source=source,
@@ -848,9 +872,10 @@ def handle_get_feedback_profile(
     relationship_type: str,
 ) -> contracts.FeedbackProfileResult:
     """Get a focused feedback profile for one relationship type."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.get_feedback_profile(instance_id, relationship_type),
-        lambda: api.get_feedback_profile(instance_id, relationship_type),
+        lambda client: client.get_feedback_profile(resolved, relationship_type),
+        lambda: api.get_feedback_profile(resolved, relationship_type),
     )
 
 
@@ -864,9 +889,10 @@ def handle_analyze_feedback(
     property_pairs: list[contracts.PropertyPairInput] | None = None,
 ) -> contracts.AnalyzeFeedbackResult:
     """Analyze structured feedback into deterministic remediation suggestions."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.analyze_feedback(
-            instance_id,
+            resolved,
             relationship_type=relationship_type,
             limit=limit,
             min_support=min_support,
@@ -875,7 +901,7 @@ def handle_analyze_feedback(
             property_pairs=property_pairs,
         ),
         lambda: api.analyze_feedback(
-            instance_id,
+            resolved,
             relationship_type,
             limit=limit,
             min_support=min_support,
@@ -896,9 +922,10 @@ def handle_get_outcome_profile(
     surface_name: str | None = None,
 ) -> contracts.OutcomeProfileResult:
     """Get a focused outcome profile for one anchor context."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.get_outcome_profile(
-            instance_id,
+            resolved,
             anchor_type=anchor_type,
             relationship_type=relationship_type,
             workflow_name=workflow_name,
@@ -906,7 +933,7 @@ def handle_get_outcome_profile(
             surface_name=surface_name,
         ),
         lambda: api.get_outcome_profile(
-            instance_id,
+            resolved,
             anchor_type=anchor_type,
             relationship_type=relationship_type,
             workflow_name=workflow_name,
@@ -929,9 +956,10 @@ def handle_analyze_outcomes(
     min_support: int = 5,
 ) -> contracts.AnalyzeOutcomesResult:
     """Analyze structured outcomes into trust and debugging suggestions."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.analyze_outcomes(
-            instance_id,
+            resolved,
             anchor_type=anchor_type,
             relationship_type=relationship_type,
             workflow_name=workflow_name,
@@ -942,7 +970,7 @@ def handle_analyze_outcomes(
             min_support=min_support,
         ),
         lambda: api.analyze_outcomes(
-            instance_id,
+            resolved,
             anchor_type=anchor_type,
             relationship_type=relationship_type,
             workflow_name=workflow_name,
@@ -962,9 +990,10 @@ def handle_feedback_batch(
     source: contracts.FeedbackSource,
 ) -> contracts.FeedbackBatchResult:
     """Record batch edge feedback tied to prior receipts."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.feedback_batch(instance_id, items=items, source=source),
-        lambda: api.feedback_batch(instance_id, items, source=source),
+        lambda client: client.feedback_batch(resolved, items=items, source=source),
+        lambda: api.feedback_batch(resolved, items, source=source),
         allow_local=False,
         operation_name="cruxible_feedback_batch",
     )
@@ -986,9 +1015,10 @@ def handle_feedback_from_query(
     path_alias: str | None = None,
 ) -> contracts.FeedbackResult:
     """Record edge feedback by selecting relationship evidence from a query receipt."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.feedback_from_query(
-            instance_id,
+            resolved,
             receipt_id=receipt_id,
             result_index=result_index,
             action=action,
@@ -1002,7 +1032,7 @@ def handle_feedback_from_query(
             path_alias=path_alias,
         ),
         lambda: api.feedback_from_query(
-            instance_id,
+            resolved,
             receipt_id=receipt_id,
             result_index=result_index,
             action=action,
@@ -1033,9 +1063,10 @@ def handle_outcome(
     detail: dict[str, Any] | None = None,
 ) -> contracts.OutcomeResult:
     """Record a structured outcome for a prior receipt or proposal resolution."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.outcome(
-            instance_id,
+            resolved,
             receipt_id=receipt_id,
             outcome=outcome,
             anchor_type=anchor_type,
@@ -1047,7 +1078,7 @@ def handle_outcome(
             detail=detail,
         ),
         lambda: api.outcome(
-            instance_id,
+            resolved,
             receipt_id,
             outcome,
             anchor_type=anchor_type,
@@ -1081,10 +1112,11 @@ def handle_list(
     continuation: str | None = None,
 ) -> contracts.ListResult:
     """List entities, edges, receipts, feedback, or outcomes."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: client.list(
-            instance_id,
+            resolved,
             resource_type=resource_type,
             entity_type=entity_type,
             relationship_type=relationship_type,
@@ -1101,7 +1133,7 @@ def handle_list(
             continuation=continuation,
         ),
         lambda: api.list_resources(
-            instance_id,
+            resolved,
             resource_type,
             entity_type=entity_type,
             relationship_type=relationship_type,
@@ -1118,7 +1150,7 @@ def handle_list(
             continuation=continuation,
         ),
     )
-    return _captured_read(result, tool="cruxible_list", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_list", instance_id=resolved)
 
 
 def handle_evaluate(
@@ -1129,16 +1161,17 @@ def handle_evaluate(
     category_filter: list[contracts.FindingCategory] | None = None,
 ) -> contracts.EvaluateResult:
     """Evaluate graph quality."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.evaluate(
-            instance_id,
+            resolved,
             max_findings=max_findings,
             exclude_orphan_types=exclude_orphan_types,
             severity_filter=severity_filter,
             category_filter=category_filter,
         ),
         lambda: api.evaluate(
-            instance_id,
+            resolved,
             max_findings=max_findings,
             exclude_orphan_types=exclude_orphan_types,
             severity_filter=severity_filter,
@@ -1149,9 +1182,10 @@ def handle_evaluate(
 
 def handle_stats(instance_id: str) -> contracts.StatsResult:
     """Return graph counts and head snapshot metadata."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.stats(instance_id),
-        lambda: api.stats(instance_id),
+        lambda client: client.stats(resolved),
+        lambda: api.stats(resolved),
     )
 
 
@@ -1163,16 +1197,17 @@ def handle_lint(
     exclude_orphan_types: list[str] | None = None,
 ) -> contracts.LintResult:
     """Run aggregate read-only lint checks."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.lint(
-            instance_id,
+            resolved,
             max_findings=max_findings,
             analysis_limit=analysis_limit,
             min_support=min_support,
             exclude_orphan_types=exclude_orphan_types,
         ),
         lambda: api.lint(
-            instance_id,
+            resolved,
             max_findings=max_findings,
             analysis_limit=analysis_limit,
             min_support=min_support,
@@ -1183,9 +1218,10 @@ def handle_lint(
 
 def handle_schema(instance_id: str) -> dict[str, Any]:
     """Get config schema details."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.schema(instance_id),
-        lambda: api.schema(instance_id),
+        lambda client: client.schema(resolved),
+        lambda: api.schema(resolved),
     )
 
 
@@ -1197,24 +1233,25 @@ def handle_sample(
     profile: contracts.ReadProfile | None = None,
 ) -> contracts.SampleResult:
     """Sample entities of a given type."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: client.sample(
-            instance_id,
+            resolved,
             entity_type,
             limit=limit,
             fields=fields,
             profile=resolved_profile,
         ),
         lambda: api.sample(
-            instance_id,
+            resolved,
             entity_type,
             limit=limit,
             fields=fields,
             profile=resolved_profile,
         ),
     )
-    return _captured_read(result, tool="cruxible_sample", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_sample", instance_id=resolved)
 
 
 def handle_inspect_entity(
@@ -1236,10 +1273,11 @@ def handle_inspect_entity(
     continuation: str | None = None,
 ) -> contracts.InspectEntityResult | contracts.InspectNeighborhoodResult:
     """Inspect one entity and its bounded neighborhood."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: client.inspect_entity(
-            instance_id,
+            resolved,
             entity_type,
             entity_id,
             direction=direction,
@@ -1256,7 +1294,7 @@ def handle_inspect_entity(
             continuation=continuation,
         ),
         lambda: api.inspect_entity(
-            instance_id,
+            resolved,
             entity_type,
             entity_id,
             direction=direction,
@@ -1273,7 +1311,7 @@ def handle_inspect_entity(
             continuation=continuation,
         ),
     )
-    return _captured_read(result, tool="cruxible_inspect_entity", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_inspect_entity", instance_id=resolved)
 
 
 def handle_inspect_entity_history(
@@ -1284,16 +1322,17 @@ def handle_inspect_entity_history(
     offset: int = 0,
 ) -> contracts.EntityChangeHistoryResult:
     """Inspect receipt-derived entity change history for one entity type or entity."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.inspect_entity_history(
-            instance_id,
+            resolved,
             entity_type,
             entity_id=entity_id,
             limit=limit,
             offset=offset,
         ),
         lambda: api.inspect_entity_history(
-            instance_id,
+            resolved,
             entity_type,
             entity_id=entity_id,
             limit=limit,
@@ -1309,9 +1348,10 @@ def handle_inspect_view(
     limit: int = 200,
 ) -> contracts.CanonicalViewResult:
     """Build a canonical structured inspect view."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.inspect_view(instance_id, view, limit=limit),
-        lambda: api.inspect_view(instance_id, view, limit=limit),
+        lambda client: client.inspect_view(resolved, view, limit=limit),
+        lambda: api.inspect_view(resolved, view, limit=limit),
     )
 
 
@@ -1324,6 +1364,7 @@ def handle_reload_config(
     config_source_manifest: contracts.ConfigSourceManifest | None = None,
 ) -> contracts.ReloadConfigResult:
     """Reload or replace an instance config."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     uploaded_yaml = config_yaml
     source_manifest = config_source_manifest
     if uploaded_yaml is None and config_path is not None:
@@ -1338,12 +1379,12 @@ def handle_reload_config(
             kwargs["config_source_manifest"] = source_manifest
         if allow_orphans:
             kwargs["allow_orphans"] = True
-        return client.reload_config(instance_id, **kwargs)
+        return client.reload_config(resolved, **kwargs)
 
     return _dispatch_remote_or_local(
         _remote_reload,
         lambda: api.reload_config(
-            instance_id,
+            resolved,
             config_path=config_path,
             config_yaml=config_yaml,
             allow_orphans=allow_orphans,
@@ -1360,12 +1401,13 @@ def handle_config_status(
     current_source_manifest: contracts.ConfigSourceManifest | None = None,
 ) -> contracts.ConfigStatusResult:
     """Report config source/materialization parity."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.config_status(
-            instance_id,
+            resolved,
             current_source_manifest=current_source_manifest,
         ),
-        lambda: api.config_status(instance_id, current_source_manifest),
+        lambda: api.config_status(resolved, current_source_manifest),
     )
 
 
@@ -1376,9 +1418,10 @@ def handle_add_relationship(
     dry_run: bool = False,
 ) -> contracts.AddRelationshipResult:
     """Add or update one or more relationships in the graph (upsert)."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.add_relationships(instance_id, relationships, dry_run=dry_run),
-        lambda: api.add_relationships(instance_id, relationships, dry_run=dry_run),
+        lambda client: client.add_relationships(resolved, relationships, dry_run=dry_run),
+        lambda: api.add_relationships(resolved, relationships, dry_run=dry_run),
         allow_local=False,
         operation_name="cruxible_add_relationship",
     )
@@ -1391,9 +1434,10 @@ def handle_add_entity(
     dry_run: bool = False,
 ) -> contracts.AddEntityResult:
     """Add or update one or more entities in the graph (upsert)."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.add_entities(instance_id, entities, dry_run=dry_run),
-        lambda: api.add_entities(instance_id, entities, dry_run=dry_run),
+        lambda client: client.add_entities(resolved, entities, dry_run=dry_run),
+        lambda: api.add_entities(resolved, entities, dry_run=dry_run),
         allow_local=False,
         operation_name="cruxible_add_entity",
     )
@@ -1406,14 +1450,15 @@ def handle_batch_direct_write(
     dry_run: bool = False,
 ) -> contracts.BatchDirectWriteResult:
     """Validate or apply one direct entity/relationship write payload."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.batch_direct_write(
-            instance_id,
+            resolved,
             payload,
             dry_run=dry_run,
         ),
         lambda: api.batch_direct_write(
-            instance_id,
+            resolved,
             payload,
             dry_run=dry_run,
         ),
@@ -1430,16 +1475,17 @@ def handle_add_constraint(
     description: str | None = None,
 ) -> contracts.AddConstraintResult:
     """Add a constraint rule to the config and write back to YAML."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.add_constraint(
-            instance_id,
+            resolved,
             name=name,
             rule=rule,
             severity=severity,
             description=description,
         ),
         lambda: api.add_constraint(
-            instance_id,
+            resolved,
             name,
             rule,
             severity,
@@ -1464,9 +1510,10 @@ def handle_add_decision_policy(
     expires_at: str | None = None,
 ) -> contracts.AddDecisionPolicyResult:
     """Add a decision policy to the config and write back to YAML."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.add_decision_policy(
-            instance_id,
+            resolved,
             name=name,
             applies_to=applies_to,
             relationship_type=relationship_type,
@@ -1479,7 +1526,7 @@ def handle_add_decision_policy(
             expires_at=expires_at,
         ),
         lambda: api.add_decision_policy(
-            instance_id,
+            resolved,
             name=name,
             applies_to=applies_to,
             relationship_type=relationship_type,
@@ -1503,17 +1550,18 @@ def handle_get_entity(
     profile: contracts.ReadProfile | None = None,
 ) -> contracts.GetEntityResult:
     """Look up a specific entity by type and ID."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     resolved_profile = resolve_mcp_read_profile(profile)
     result = _dispatch_remote_or_local(
         lambda client: client.get_entity(
-            instance_id,
+            resolved,
             entity_type,
             entity_id,
             profile=resolved_profile,
         ),
-        lambda: api.get_entity(instance_id, entity_type, entity_id, profile=resolved_profile),
+        lambda: api.get_entity(resolved, entity_type, entity_id, profile=resolved_profile),
     )
-    return _captured_read(result, tool="cruxible_get_entity", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_get_entity", instance_id=resolved)
 
 
 def handle_get_relationship(
@@ -1526,9 +1574,10 @@ def handle_get_relationship(
     edge_key: int | None = None,
 ) -> contracts.GetRelationshipResult:
     """Look up a specific relationship by its endpoints and type."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     result = _dispatch_remote_or_local(
         lambda client: client.get_relationship(
-            instance_id,
+            resolved,
             from_type=from_type,
             from_id=from_id,
             relationship_type=relationship_type,
@@ -1537,7 +1586,7 @@ def handle_get_relationship(
             edge_key=edge_key,
         ),
         lambda: api.get_relationship(
-            instance_id,
+            resolved,
             from_type,
             from_id,
             relationship_type,
@@ -1546,7 +1595,7 @@ def handle_get_relationship(
             edge_key=edge_key,
         ),
     )
-    return _captured_read(result, tool="cruxible_get_relationship", instance_id=instance_id)
+    return _captured_read(result, tool="cruxible_get_relationship", instance_id=resolved)
 
 
 def handle_relationship_lineage(
@@ -1559,9 +1608,10 @@ def handle_relationship_lineage(
     edge_key: int | None = None,
 ) -> contracts.RelationshipLineageResult:
     """Look up a relationship and follow group provenance when available."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.get_relationship_lineage(
-            instance_id,
+            resolved,
             from_type=from_type,
             from_id=from_id,
             relationship_type=relationship_type,
@@ -1570,7 +1620,7 @@ def handle_relationship_lineage(
             edge_key=edge_key,
         ),
         lambda: api.get_relationship_lineage(
-            instance_id,
+            resolved,
             from_type,
             from_id,
             relationship_type,
@@ -1593,9 +1643,10 @@ def handle_propose_group(
     suggested_priority: str | None = None,
 ) -> contracts.ProposeGroupToolResult:
     """Propose a candidate group for batch edge review."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.propose_group(
-            instance_id,
+            resolved,
             relationship_type=relationship_type,
             members=members,
             thesis_text=thesis_text,
@@ -1606,7 +1657,7 @@ def handle_propose_group(
             suggested_priority=suggested_priority,
         ),
         lambda: api.propose_group(
-            instance_id,
+            resolved,
             relationship_type,
             members,
             thesis_text=thesis_text,
@@ -1631,9 +1682,10 @@ def handle_resolve_group(
     stamp_existing: bool = False,
 ) -> contracts.ResolveGroupToolResult:
     """Resolve a candidate group (approve or reject)."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.resolve_group(
-            instance_id,
+            resolved,
             group_id,
             action=action,
             rationale=rationale,
@@ -1642,7 +1694,7 @@ def handle_resolve_group(
             stamp_existing=stamp_existing,
         ),
         lambda: api.resolve_group(
-            instance_id,
+            resolved,
             group_id,
             action,
             rationale=rationale,
@@ -1662,15 +1714,16 @@ def handle_update_trust_status(
     reason: str = "",
 ) -> contracts.UpdateTrustStatusToolResult:
     """Update trust status on a resolution."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.update_trust_status(
-            instance_id,
+            resolved,
             resolution_id,
             trust_status=trust_status,
             reason=reason,
         ),
         lambda: api.update_trust_status(
-            instance_id,
+            resolved,
             resolution_id,
             trust_status,
             reason,
@@ -1685,9 +1738,10 @@ def handle_get_group(
     group_id: str,
 ) -> contracts.GetGroupToolResult:
     """Get a candidate group with its members."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.get_group(instance_id, group_id),
-        lambda: api.get_group(instance_id, group_id),
+        lambda client: client.get_group(resolved, group_id),
+        lambda: api.get_group(resolved, group_id),
     )
 
 
@@ -1698,14 +1752,15 @@ def handle_group_status(
     signature: str | None = None,
 ) -> contracts.GroupBucketStatusToolResult:
     """Get signature-bucket lifecycle status."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.get_group_status(
-            instance_id,
+            resolved,
             group_id=group_id,
             signature=signature,
         ),
         lambda: api.get_group_status(
-            instance_id,
+            resolved,
             group_id=group_id,
             signature=signature,
         ),
@@ -1720,16 +1775,17 @@ def handle_list_groups(
     offset: int = 0,
 ) -> contracts.ListGroupsToolResult:
     """List candidate groups with optional filters."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_groups(
-            instance_id,
+            resolved,
             relationship_type=relationship_type,
             status=status,
             limit=limit,
             offset=offset,
         ),
         lambda: api.list_groups(
-            instance_id,
+            resolved,
             relationship_type,
             status,
             limit,
@@ -1745,16 +1801,17 @@ def handle_list_resolutions(
     offset: int = 0,
 ) -> contracts.ListResolutionsToolResult:
     """List group resolutions with optional filters."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.list_resolutions(
-            instance_id,
+            resolved,
             relationship_type=relationship_type,
             action=action,
             limit=limit,
             offset=offset,
         ),
         lambda: api.list_resolutions(
-            instance_id,
+            resolved,
             relationship_type,
             action,
             limit,
@@ -1770,16 +1827,17 @@ def handle_state_publish(
     compatibility: contracts.StateCompatibility,
 ) -> contracts.StatePublishResult:
     """Publish a root state instance to a transport ref."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.state_publish(
-            instance_id,
+            resolved,
             transport_ref=transport_ref,
             state_id=state_id,
             release_id=release_id,
             compatibility=compatibility,
         ),
         lambda: api.state_publish(
-            instance_id,
+            resolved,
             transport_ref,
             state_id,
             release_id,
@@ -1795,9 +1853,10 @@ def handle_create_snapshot(
     label: str | None = None,
 ) -> contracts.SnapshotCreateResult:
     """Create an immutable snapshot for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.create_snapshot(instance_id, label=label),
-        lambda: api.create_snapshot(instance_id, label),
+        lambda client: client.create_snapshot(resolved, label=label),
+        lambda: api.create_snapshot(resolved, label),
         allow_local=False,
         operation_name="cruxible_create_snapshot",
     )
@@ -1809,13 +1868,14 @@ def handle_instance_backup(
     label: str | None = None,
 ) -> contracts.InstanceBackupResult:
     """Write a portable same-identity backup artifact for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.backup_instance(
-            instance_id,
+            resolved,
             artifact_path=artifact_path,
             label=label,
         ),
-        lambda: api.backup_instance(instance_id, artifact_path=artifact_path, label=label),
+        lambda: api.backup_instance(resolved, artifact_path=artifact_path, label=label),
         allow_local=False,
         operation_name="cruxible_instance_backup",
     )
@@ -1840,14 +1900,15 @@ def handle_instance_relocate(
     remove_source: bool = False,
 ) -> contracts.InstanceRelocateResult:
     """Move a healthy daemon-backed instance to a new directory, preserving identity."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.relocate_instance(
-            instance_id,
+            resolved,
             to_dir=to_dir,
             remove_source=remove_source,
         ),
         lambda: api.relocate_instance(
-            instance_id,
+            resolved,
             to_dir=to_dir,
             remove_source=remove_source,
         ),
@@ -1863,9 +1924,10 @@ def handle_list_snapshots(
     offset: int = 0,
 ) -> contracts.SnapshotListResult:
     """List snapshots for an instance."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.list_snapshots(instance_id, limit=limit, offset=offset),
-        lambda: api.list_snapshots(instance_id, limit=limit, offset=offset),
+        lambda client: client.list_snapshots(resolved, limit=limit, offset=offset),
+        lambda: api.list_snapshots(resolved, limit=limit, offset=offset),
     )
 
 
@@ -1880,6 +1942,7 @@ def handle_register_source_artifact(
     label: str | None = None,
 ) -> contracts.RegisterSourceArtifactResult:
     """Register a source artifact for source-backed proposal evidence."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     register_kwargs: dict[str, Any] = {
         "source_path": source_path,
         "source_kind": source_kind,
@@ -1891,8 +1954,8 @@ def handle_register_source_artifact(
         register_kwargs["source_artifact_id"] = source_artifact_id
 
     return _dispatch_remote_or_local(
-        lambda client: client.register_source_artifact(instance_id, **register_kwargs),
-        lambda: api.register_source_artifact(instance_id, **register_kwargs),
+        lambda client: client.register_source_artifact(resolved, **register_kwargs),
+        lambda: api.register_source_artifact(resolved, **register_kwargs),
         allow_local=False,
         operation_name="cruxible_register_source_artifact",
     )
@@ -1908,9 +1971,10 @@ def handle_dereference_source_evidence(
     expected_content_hash: str | None = None,
 ) -> contracts.DereferenceSourceEvidenceResult:
     """Dereference source-backed proposal evidence."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.dereference_source_evidence(
-            instance_id,
+            resolved,
             source_artifact_id=source_artifact_id,
             chunk_id=chunk_id,
             heading_path=heading_path,
@@ -1918,7 +1982,7 @@ def handle_dereference_source_evidence(
             expected_content_hash=expected_content_hash,
         ),
         lambda: api.dereference_source_evidence(
-            instance_id,
+            resolved,
             source_artifact_id=source_artifact_id,
             chunk_id=chunk_id,
             heading_path=heading_path,
@@ -1934,13 +1998,14 @@ def handle_clone_snapshot(
     root_dir: str,
 ) -> contracts.CloneSnapshotResult:
     """Create a point-in-time clone from a snapshot."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.clone_snapshot(
-            instance_id,
+            resolved,
             snapshot_id=snapshot_id,
             root_dir=root_dir,
         ),
-        lambda: api.clone_snapshot_governed(instance_id, snapshot_id, root_dir),
+        lambda: api.clone_snapshot_governed(resolved, snapshot_id, root_dir),
         allow_local=False,
         operation_name="cruxible_clone_snapshot",
     )
@@ -1948,17 +2013,19 @@ def handle_clone_snapshot(
 
 def handle_state_status(instance_id: str) -> contracts.StateStatusResult:
     """Read upstream tracking metadata for a release-backed overlay."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.state_status(instance_id),
-        lambda: api.state_status(instance_id),
+        lambda client: client.state_status(resolved),
+        lambda: api.state_status(resolved),
     )
 
 
 def handle_state_pull_preview(instance_id: str) -> contracts.StatePullPreviewResult:
     """Preview pulling a new upstream release into a local overlay."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
-        lambda client: client.state_pull_preview(instance_id),
-        lambda: api.state_pull_preview(instance_id),
+        lambda client: client.state_pull_preview(resolved),
+        lambda: api.state_pull_preview(resolved),
     )
 
 
@@ -1967,13 +2034,14 @@ def handle_state_pull_apply(
     expected_apply_digest: str,
 ) -> contracts.StatePullApplyResult:
     """Apply a previewed upstream release into a local overlay."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     return _dispatch_remote_or_local(
         lambda client: client.state_pull_apply(
-            instance_id,
+            resolved,
             expected_apply_digest=expected_apply_digest,
         ),
         lambda: api.state_pull_apply(
-            instance_id,
+            resolved,
             expected_apply_digest,
         ),
         allow_local=False,
@@ -1998,6 +2066,7 @@ def handle_ontology_edit(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Handle ontology edit operations: entity_type_add/update, relationship_add, enum_add/value_add."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     from cruxible_core.service.ontology_editor import (
         service_entity_type_add,
         service_entity_type_update,
@@ -2007,7 +2076,7 @@ def handle_ontology_edit(
     )
 
     def _local_edit() -> dict[str, Any]:
-        instance = get_manager().get(instance_id)
+        instance = get_manager().get(resolved)
         service_dispatch = {
             "entity_type_add": lambda: service_entity_type_add(
                 instance, name, properties=properties, description=description, dry_run=dry_run
@@ -2035,7 +2104,7 @@ def handle_ontology_edit(
         return fn()
 
     return _dispatch_remote_or_local(
-        lambda client: client.ontology_edit(instance_id, action, **locals()),
+        lambda client: client.ontology_edit(resolved, action, **locals()),
         _local_edit,
         allow_local=True,
         operation_name=f"cruxible_ontology_{action}",
@@ -2124,14 +2193,15 @@ def handle_discover_schema(
 
 def handle_ontology_describe(instance_id: str) -> dict[str, Any]:
     """Return a human-readable description of the current ontology."""
+    resolved, _used_default = resolve_default_instance_id(instance_id)
     from cruxible_core.service.ontology_editor import service_ontology_describe
 
     def _local() -> dict[str, Any]:
-        instance = get_manager().get(instance_id)
+        instance = get_manager().get(resolved)
         return {"description": service_ontology_describe(instance)}
 
     return _dispatch_remote_or_local(
-        lambda client: {"description": client.ontology_describe(instance_id)},
+        lambda client: {"description": client.ontology_describe(resolved)},
         _local,
         operation_name="cruxible_ontology_describe",
     )

@@ -904,6 +904,8 @@ def server_info() -> contracts.ServerInfoResult:
         instance_count=result.instance_count,
         auth_enabled=result.auth_enabled,
         auth_required=result.auth_required,
+        default_instance_id=result.default_instance_id,
+        permission_mode=result.permission_mode,
     )
 
 

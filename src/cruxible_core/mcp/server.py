@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 
 import structlog
@@ -200,9 +201,13 @@ def create_server() -> FastMCP:
     """Create and configure the cruxible-core MCP server."""
     settings = resolve_server_settings()
     mode = init_permissions()
+    host = os.getenv("FASTMCP_HOST", "127.0.0.1")
+    port = int(os.getenv("FASTMCP_PORT", "8000"))
     server = FastMCP(
         name=f"cruxible v{__version__}",
         instructions="",
+        host=host,
+        port=port,
     )
     registered = register_tools(server, offload_sync_calls=settings.enabled)
     validate_tool_permissions(registered)

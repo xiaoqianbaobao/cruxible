@@ -35,3 +35,7 @@ docs/llms-full.txt
 
 # Local operation-instance config (customized agent-operation + project-domain overlay); never shipped
 /ops/
+
+# Local POC runtime state / daemon cache: never ship
+.poc/cruxible_server_state/
+.cruxible-mcp-command.json

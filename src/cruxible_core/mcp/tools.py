@@ -107,23 +107,27 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_lock_workflow(
-        instance_id: str,
+        instance_id: str | None = None,
         force: bool = False,
     ) -> contracts.WorkflowLockResult:
         """Generate the workflow lock file for the current instance config.
 
         Run this after changing providers, artifacts, or workflow config and
         before planning or executing workflows.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_workflow_lock(instance_id, force=force)
 
     @_tool
     def cruxible_plan_workflow(
-        instance_id: str,
         workflow_name: str,
+        instance_id: str | None = None,
         input_payload: dict[str, Any] | None = None,
     ) -> contracts.WorkflowPlanResult:
-        """Compile a configured workflow into a concrete execution plan."""
+        """Compile a configured workflow into a concrete execution plan.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_workflow_plan(
             instance_id,
             workflow_name,
@@ -132,8 +136,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_run_workflow(
-        instance_id: str,
         workflow_name: str,
+        instance_id: str | None = None,
         input_payload: dict[str, Any] | None = None,
         decision_record_id: str | None = None,
     ) -> contracts.WorkflowRunResult:
@@ -142,6 +146,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         Canonical workflows run in preview mode and return an `apply_digest`
         plus the current `head_snapshot_id`. To commit a canonical workflow,
         call `cruxible_apply_workflow` with those values.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_workflow_run(
             instance_id,
@@ -152,14 +158,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_apply_workflow(
-        instance_id: str,
         workflow_name: str,
         expected_apply_digest: str,
+        instance_id: str | None = None,
         expected_head_snapshot_id: str | None = None,
         input_payload: dict[str, Any] | None = None,
         decision_record_id: str | None = None,
     ) -> contracts.WorkflowApplyResult:
-        """Commit a previously previewed canonical workflow after verifying identity."""
+        """Commit a previously previewed canonical workflow after verifying identity.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_workflow_apply(
             instance_id,
             workflow_name,
@@ -171,16 +179,18 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_test_workflow(
-        instance_id: str,
+        instance_id: str | None = None,
         name: str | None = None,
     ) -> contracts.WorkflowTestResult:
-        """Run configured workflow tests for an instance."""
+        """Run configured workflow tests for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_workflow_test(instance_id, name=name)
 
     @_tool
     def cruxible_query(
-        instance_id: str,
         query_name: str,
+        instance_id: str | None = None,
         params: dict[str, Any] | None = None,
         limit: int | None = None,
         offset: int = 0,
@@ -216,6 +226,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         traversal-step alias) for path-shaped results. Same information
         without per-row duplication — prefer it for multi-row traversal
         reads where you need the relational context.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         # Returned as a plain dict: the result is a UNION of the rows and
         # graph contract models, and FastMCP wraps union-annotated returns
@@ -237,8 +249,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_query_inline(
-        instance_id: str,
         definition: contracts.InlineQueryDefinition,
+        instance_id: str | None = None,
         params: dict[str, Any] | None = None,
         limit: int | None = None,
         relationship_state: contracts.QueryVisibilityState | None = None,
@@ -261,6 +273,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         transport (`nodes`/`edges` once each, `results` as ordered index
         references, `paths` for path-shaped results), exactly as for
         `cruxible_query`.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         # Returned as a plain dict: the result is a UNION of the rows and
         # graph contract models, and FastMCP wraps union-annotated returns
@@ -281,7 +295,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list_queries(
-        instance_id: str,
+        instance_id: str | None = None,
         detail: contracts.QueryListDetail = "summary",
         limit: int | None = None,
         offset: int = 0,
@@ -298,6 +312,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         would break the flat list-envelope shape shared by every list tool.
         The real union schema is still advertised via
         `_publish_union_output_schemas`.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         result = handlers.handle_list_queries(
             instance_id,
@@ -310,37 +326,45 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_describe_query(
-        instance_id: str,
         query_name: str,
+        instance_id: str | None = None,
     ) -> contracts.NamedQueryInfoResult:
-        """Describe one named query with the details needed to invoke it correctly."""
+        """Describe one named query with the details needed to invoke it correctly.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_describe_query(instance_id, query_name)
 
     @_tool
     def cruxible_receipt(
-        instance_id: str,
         receipt_id: str,
+        instance_id: str | None = None,
     ) -> dict[str, Any]:
-        """Fetch a stored receipt by `receipt_id` from a previous query."""
+        """Fetch a stored receipt by `receipt_id` from a previous query.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_receipt(instance_id, receipt_id)
 
     @_tool
     def cruxible_get_trace(
-        instance_id: str,
         trace_id: str,
+        instance_id: str | None = None,
     ) -> dict[str, Any]:
-        """Fetch a provider execution trace by `trace_id`."""
+        """Fetch a provider execution trace by `trace_id`.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_get_trace(instance_id, trace_id)
 
     @_tool
     def cruxible_list_traces(
-        instance_id: str,
+        instance_id: str | None = None,
         workflow_name: str | None = None,
         provider_name: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> contracts.TraceListResult:
-        """List provider execution trace summaries with optional workflow/provider filters."""
+        """List provider execution trace summaries with optional workflow/provider filters.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_list_traces(
             instance_id,
             workflow_name=workflow_name,
@@ -351,7 +375,6 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_feedback(
-        instance_id: str,
         action: contracts.FeedbackAction,
         source: contracts.FeedbackSource,
         from_type: str,
@@ -359,6 +382,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         relationship_type: str,
         to_type: str,
         to_id: str,
+        instance_id: str | None = None,
         edge_key: int | None = None,
         reason: str = "",
         reason_code: str | None = None,
@@ -382,6 +406,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         Set `group_override=True` to mark the edge assertion metadata as a
         group override for group resolve. The edge must already exist in the
         graph.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_feedback(
             instance_id=instance_id,
@@ -403,19 +429,21 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_feedback_batch(
-        instance_id: str,
         items: list[contracts.FeedbackBatchItemInput],
+        instance_id: str | None = None,
         source: contracts.FeedbackSource = "human",
     ) -> contracts.FeedbackBatchResult:
-        """Record batch edge feedback under one top-level mutation receipt."""
+        """Record batch edge feedback under one top-level mutation receipt.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_feedback_batch(instance_id, items, source=source)
 
     @_tool
     def cruxible_feedback_from_query(
-        instance_id: str,
         receipt_id: str,
         result_index: int,
         action: contracts.FeedbackAction,
+        instance_id: str | None = None,
         source: contracts.FeedbackSource = "human",
         reason: str = "",
         reason_code: str | None = None,
@@ -430,6 +458,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         This adjudicates one existing relationship assertion. It does not
         resolve candidate groups; use group resolution for group theses and
         member-set decisions.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_feedback_from_query(
             instance_id,
@@ -448,8 +478,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_outcome(
-        instance_id: str,
         outcome: contracts.OutcomeValue,
+        instance_id: str | None = None,
         receipt_id: str | None = None,
         anchor_type: contracts.OutcomeAnchorType = "receipt",
         anchor_id: str | None = None,
@@ -459,7 +489,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         outcome_profile_key: str | None = None,
         detail: dict[str, Any] | None = None,
     ) -> contracts.OutcomeResult:
-        """Record a structured outcome for a receipt or proposal resolution."""
+        """Record a structured outcome for a receipt or proposal resolution.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_outcome(
             instance_id,
             outcome,
@@ -475,8 +507,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list(
-        instance_id: str,
         resource_type: contracts.ResourceType,
+        instance_id: str | None = None,
         entity_type: str | None = None,
         relationship_type: str | None = None,
         query_name: str | None = None,
@@ -517,6 +549,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         `continuation_token` — pass it back as `continuation` with the SAME
         filters to fetch the next page. A 409 stale-continuation error means
         state mutated between pages; restart from the first page.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_list(
             instance_id,
@@ -538,7 +572,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_evaluate(
-        instance_id: str,
+        instance_id: str | None = None,
         max_findings: int = 100,
         exclude_orphan_types: list[str] | None = None,
         severity_filter: list[contracts.FindingSeverity] | None = None,
@@ -555,6 +589,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         (e.g. ``["PCDBPartType"]``) that are expected to be unconnected.
         Use `severity_filter` and `category_filter` to ask narrow triage
         questions while preserving full pre-filter summary counts.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_evaluate(
             instance_id,
@@ -565,19 +601,23 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         )
 
     @_tool
-    def cruxible_stats(instance_id: str) -> contracts.StatsResult:
-        """Return graph counts, relationship counts, and head snapshot metadata."""
+    def cruxible_stats(instance_id: str | None = None) -> contracts.StatsResult:
+        """Return graph counts, relationship counts, and head snapshot metadata.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_stats(instance_id)
 
     @_tool
     def cruxible_lint(
-        instance_id: str,
+        instance_id: str | None = None,
         max_findings: int = 100,
         analysis_limit: int = 200,
         min_support: int = 5,
         exclude_orphan_types: list[str] | None = None,
     ) -> contracts.LintResult:
-        """Run aggregate read-only config, graph, feedback, and outcome checks."""
+        """Run aggregate read-only config, graph, feedback, and outcome checks.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_lint(
             instance_id,
             max_findings=max_findings,
@@ -588,23 +628,27 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_get_feedback_profile(
-        instance_id: str,
         relationship_type: str,
+        instance_id: str | None = None,
     ) -> contracts.FeedbackProfileResult:
-        """Return the configured feedback profile for one relationship type."""
+        """Return the configured feedback profile for one relationship type.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_get_feedback_profile(instance_id, relationship_type)
 
     @_tool
     def cruxible_analyze_feedback(
-        instance_id: str,
         relationship_type: str,
+        instance_id: str | None = None,
         limit: int = 200,
         min_support: int = 5,
         decision_surface_type: str | None = None,
         decision_surface_name: str | None = None,
         property_pairs: list[contracts.PropertyPairInput] | None = None,
     ) -> contracts.AnalyzeFeedbackResult:
-        """Analyze structured feedback into deterministic remediation suggestions."""
+        """Analyze structured feedback into deterministic remediation suggestions.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_analyze_feedback(
             instance_id,
             relationship_type,
@@ -617,14 +661,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_get_outcome_profile(
-        instance_id: str,
         anchor_type: contracts.OutcomeAnchorType,
+        instance_id: str | None = None,
         relationship_type: str | None = None,
         workflow_name: str | None = None,
         surface_type: str | None = None,
         surface_name: str | None = None,
     ) -> contracts.OutcomeProfileResult:
-        """Return the configured outcome profile for one anchor context."""
+        """Return the configured outcome profile for one anchor context.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_get_outcome_profile(
             instance_id,
             anchor_type=anchor_type,
@@ -636,8 +682,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_analyze_outcomes(
-        instance_id: str,
         anchor_type: contracts.OutcomeAnchorType,
+        instance_id: str | None = None,
         relationship_type: str | None = None,
         workflow_name: str | None = None,
         query_name: str | None = None,
@@ -646,7 +692,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         limit: int = 200,
         min_support: int = 5,
     ) -> contracts.AnalyzeOutcomesResult:
-        """Analyze structured outcomes into trust and debugging suggestions."""
+        """Analyze structured outcomes into trust and debugging suggestions.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_analyze_outcomes(
             instance_id,
             anchor_type=anchor_type,
@@ -660,14 +708,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         )
 
     @_tool
-    def cruxible_schema(instance_id: str) -> dict[str, Any]:
-        """Return the active config schema for an instance."""
+    def cruxible_schema(instance_id: str | None = None) -> dict[str, Any]:
+        """Return the active config schema for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_schema(instance_id)
 
     @_tool
     def cruxible_sample(
-        instance_id: str,
         entity_type: str,
+        instance_id: str | None = None,
         limit: int = 5,
         fields: list[str] | None = None,
         profile: contracts.ReadProfile | None = None,
@@ -677,14 +727,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         `profile` shapes item payloads: `compact` (default here) returns
         bounded identity cards; pass `standard` or `full` for full
         property bags and metadata.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_sample(instance_id, entity_type, limit, fields, profile=profile)
 
     @_tool
     def cruxible_inspect_entity(
-        instance_id: str,
         entity_type: str,
         entity_id: str,
+        instance_id: str | None = None,
         direction: str = "both",
         relationship_type: str | None = None,
         limit: int | None = None,
@@ -728,6 +780,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         `continuation` with the SAME structural parameters to resume the
         expansion where the budget stopped it. A 409 stale-continuation
         error means state mutated between pages; restart the read.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         # Returned as a plain dict: the result is a UNION of the legacy and
         # expanded contract models, and FastMCP wraps union-annotated returns
@@ -754,13 +808,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_inspect_entity_history(
-        instance_id: str,
         entity_type: str,
+        instance_id: str | None = None,
         entity_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> contracts.EntityChangeHistoryResult:
-        """Inspect receipt-derived entity property changes for one entity type or entity."""
+        """Inspect receipt-derived entity property changes for one entity type or entity.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_entity_history(
             instance_id,
             entity_type,
@@ -771,45 +827,55 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_inspect_ontology(
-        instance_id: str,
+        instance_id: str | None = None,
     ) -> contracts.CanonicalViewResult:
-        """Return the structured canonical ontology view for an instance."""
+        """Return the structured canonical ontology view for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_view(instance_id, "ontology")
 
     @_tool
     def cruxible_inspect_workflows(
-        instance_id: str,
+        instance_id: str | None = None,
     ) -> contracts.CanonicalViewResult:
-        """Return the structured canonical workflow view for an instance."""
+        """Return the structured canonical workflow view for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_view(instance_id, "workflows")
 
     @_tool
     def cruxible_inspect_queries(
-        instance_id: str,
+        instance_id: str | None = None,
     ) -> contracts.CanonicalViewResult:
-        """Return the structured canonical query view for an instance."""
+        """Return the structured canonical query view for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_view(instance_id, "queries")
 
     @_tool
     def cruxible_inspect_governance(
-        instance_id: str,
+        instance_id: str | None = None,
         limit: int = 200,
     ) -> contracts.CanonicalViewResult:
-        """Return the structured canonical governance view for an instance."""
+        """Return the structured canonical governance view for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_view(instance_id, "governance", limit=limit)
 
     @_tool
     def cruxible_inspect_overview(
-        instance_id: str,
+        instance_id: str | None = None,
         limit: int = 200,
     ) -> contracts.CanonicalViewResult:
-        """Return the structured canonical overview view for an instance."""
+        """Return the structured canonical overview view for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_inspect_view(instance_id, "overview", limit=limit)
 
     @_tool
     def cruxible_add_relationship(
-        instance_id: str,
         relationships: list[contracts.RelationshipInput],
+        instance_id: str | None = None,
         dry_run: bool = False,
     ) -> contracts.AddRelationshipResult:
         """Add or update relationships in the graph (upsert).
@@ -827,13 +893,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
         Batch size: practical limit is ~500 relationships per call.
         For bulk loading, use workflow dataflow steps plus apply_relationships.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_add_relationship(instance_id, relationships, dry_run=dry_run)
 
     @_tool
     def cruxible_add_entity(
-        instance_id: str,
         entities: list[contracts.EntityInput],
+        instance_id: str | None = None,
         dry_run: bool = False,
     ) -> contracts.AddEntityResult:
         """Add or update entities in the graph (upsert).
@@ -843,13 +911,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         entity merges properties and metadata.
         Use for entities from free text or external sources when CSV ingestion
         is not available.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_add_entity(instance_id, entities, dry_run=dry_run)
 
     @_tool
     def cruxible_batch_direct_write(
-        instance_id: str,
         payload: contracts.BatchDirectWritePayload,
+        instance_id: str | None = None,
         dry_run: bool = False,
     ) -> contracts.BatchDirectWriteResult:
         """Validate or apply a direct batch graph write payload.
@@ -863,6 +933,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         Set dry_run=true to validate entity properties, relationship endpoints,
         relationship properties, evidence locators, duplicate IDs, and missing
         shared evidence keys without mutating graph state.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_batch_direct_write(
             instance_id,
@@ -872,9 +944,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_add_constraint(
-        instance_id: str,
         name: str,
         rule: str,
+        instance_id: str | None = None,
         severity: contracts.ConstraintSeverity = "warning",
         description: str | None = None,
     ) -> contracts.AddConstraintResult:
@@ -886,16 +958,18 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         Identifiers may contain letters, digits, underscores, and hyphens.
 
         Example: classified_as.FROM.Category == classified_as.TO.CategoryName
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_add_constraint(instance_id, name, rule, severity, description)
 
     @_tool
     def cruxible_add_decision_policy(
-        instance_id: str,
         name: str,
         applies_to: contracts.DecisionPolicyAppliesTo,
         relationship_type: str,
         effect: contracts.DecisionPolicyEffect,
+        instance_id: str | None = None,
         match: contracts.DecisionPolicyMatchInput | None = None,
         description: str | None = None,
         rationale: str = "",
@@ -903,7 +977,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         workflow_name: str | None = None,
         expires_at: str | None = None,
     ) -> contracts.AddDecisionPolicyResult:
-        """Add a decision policy to the config for query/workflow execution."""
+        """Add a decision policy to the config for query/workflow execution.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_add_decision_policy(
             instance_id,
             name,
@@ -920,13 +996,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_reload_config(
-        instance_id: str,
+        instance_id: str | None = None,
         config_path: str | None = None,
         config_yaml: str | None = None,
         allow_orphans: bool = False,
         config_source_manifest: contracts.ConfigSourceManifest | None = None,
     ) -> contracts.ReloadConfigResult:
-        """Reload or replace an instance config after validation."""
+        """Reload or replace an instance config after validation.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_reload_config(
             instance_id,
             config_path=config_path,
@@ -937,10 +1015,12 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_config_status(
-        instance_id: str,
+        instance_id: str | None = None,
         current_source_manifest: contracts.ConfigSourceManifest | None = None,
     ) -> contracts.ConfigStatusResult:
-        """Report source drift and active materialized-config integrity."""
+        """Report source drift and active materialized-config integrity.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_config_status(
             instance_id,
             current_source_manifest=current_source_manifest,
@@ -948,8 +1028,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_propose_workflow(
-        instance_id: str,
         workflow_name: str,
+        instance_id: str | None = None,
         input_payload: dict[str, Any] | None = None,
         decision_record_id: str | None = None,
     ) -> contracts.WorkflowProposeResult:
@@ -959,6 +1039,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         through Cruxible's proposal/review/trust boundary instead of writing edges directly.
         The workflow must be `type: proposal` and return a relationship proposal artifact from a
         `propose_relationship_group` step.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_propose_workflow(
             instance_id,
@@ -969,13 +1051,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_create_decision_record(
-        instance_id: str,
         question: str,
+        instance_id: str | None = None,
         subject_type: str | None = None,
         subject_id: str | None = None,
         opened_by: str = "human",
     ) -> contracts.DecisionRecordResult:
-        """Open a decision record that can collect query and workflow receipts."""
+        """Open a decision record that can collect query and workflow receipts.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_create_decision_record(
             instance_id,
             question=question,
@@ -986,11 +1070,13 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_get_decision_record(
-        instance_id: str,
         decision_record_id: str,
+        instance_id: str | None = None,
         include_events: bool = True,
     ) -> contracts.DecisionRecordResult:
-        """Fetch one decision record, optionally including its logged events."""
+        """Fetch one decision record, optionally including its logged events.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_get_decision_record(
             instance_id,
             decision_record_id,
@@ -999,7 +1085,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list_decision_records(
-        instance_id: str,
+        instance_id: str | None = None,
         status: str | None = None,
         subject_type: str | None = None,
         subject_id: str | None = None,
@@ -1007,7 +1093,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         limit: int = 100,
         offset: int = 0,
     ) -> contracts.DecisionRecordListResult:
-        """List decision records with lifecycle and subject filters."""
+        """List decision records with lifecycle and subject filters.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_list_decision_records(
             instance_id,
             status=status,
@@ -1020,7 +1108,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list_decision_events(
-        instance_id: str,
+        instance_id: str | None = None,
         decision_record_id: str | None = None,
         receipt_id: str | None = None,
         trace_id: str | None = None,
@@ -1028,7 +1116,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         limit: int = 100,
         offset: int = 0,
     ) -> contracts.DecisionEventListResult:
-        """List decision-record events by record, receipt, trace, or status."""
+        """List decision-record events by record, receipt, trace, or status.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_list_decision_events(
             instance_id,
             decision_record_id=decision_record_id,
@@ -1041,13 +1131,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_finalize_decision_record(
-        instance_id: str,
         decision_record_id: str,
         final_decision: str,
         decision_class: contracts.DecisionClass,
+        instance_id: str | None = None,
         rationale: str = "",
     ) -> contracts.DecisionRecordResult:
-        """Finalize a decision record with an indexed decision class and rationale."""
+        """Finalize a decision record with an indexed decision class and rationale.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_finalize_decision_record(
             instance_id,
             decision_record_id,
@@ -1058,11 +1150,13 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_abandon_decision_record(
-        instance_id: str,
         decision_record_id: str,
+        instance_id: str | None = None,
         reason: str = "",
     ) -> contracts.DecisionRecordResult:
-        """Abandon an open decision record without finalizing a recommendation."""
+        """Abandon an open decision record without finalizing a recommendation.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_abandon_decision_record(
             instance_id,
             decision_record_id,
@@ -1071,9 +1165,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_propose_group(
-        instance_id: str,
         relationship_type: str,
         members: list[contracts.MemberInput],
+        instance_id: str | None = None,
         thesis_text: str = "",
         thesis_facts: dict[str, Any] | None = None,
         analysis_state: dict[str, Any] | None = None,
@@ -1093,6 +1187,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         If a prior trusted resolution exists for the same thesis signature and
         all signals meet the auto-resolve policy, the group is auto-resolved.
         Otherwise it enters pending_review with a Cruxible-derived review_priority.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_propose_group(
             instance_id,
@@ -1108,10 +1204,10 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_resolve_group(
-        instance_id: str,
         group_id: str,
         action: contracts.GroupAction,
         expected_pending_version: int,
+        instance_id: str | None = None,
         rationale: str = "",
         resolved_by: contracts.GroupResolvedBy = "human",
         stamp_existing: bool = False,
@@ -1124,6 +1220,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         surviving pre-existing edge with this group's review status and
         provenance. Reject records the resolution without graph mutation. Both
         persist the resolution for audit and future auto-resolve precedent.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_resolve_group(
             instance_id,
@@ -1137,9 +1235,9 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_update_trust_status(
-        instance_id: str,
         resolution_id: str,
         trust_status: contracts.GroupTrustStatus,
+        instance_id: str | None = None,
         reason: str = "",
     ) -> contracts.UpdateTrustStatusToolResult:
         """Update the trust status on a confirmed approved resolution.
@@ -1148,6 +1246,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         governs auto-resolve eligibility. Promote ``watch`` to ``trusted`` to
         enable auto-resolve. Set ``invalidated`` to block auto-resolve and
         escalate future proposals to critical priority.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_update_trust_status(
             instance_id, resolution_id, trust_status, reason=reason
@@ -1155,8 +1255,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_get_group(
-        instance_id: str,
         group_id: str,
+        instance_id: str | None = None,
     ) -> contracts.GetGroupToolResult:
         """Get a candidate group by ID, including its members and resolution.
 
@@ -1164,12 +1264,14 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         the full list of members with their signals. If the group has been
         resolved, includes the resolution details (action, trust_status,
         rationale).
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_get_group(instance_id, group_id)
 
     @_tool
     def cruxible_list_groups(
-        instance_id: str,
+        instance_id: str | None = None,
         relationship_type: str | None = None,
         status: contracts.GroupStatus | None = None,
         limit: int = 50,
@@ -1181,6 +1283,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         Use ``status`` to filter by lifecycle state (pending_review,
         auto_resolved, applying, resolved). Use ``relationship_type``
         to filter by edge type.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_list_groups(
             instance_id,
@@ -1192,7 +1296,7 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list_resolutions(
-        instance_id: str,
+        instance_id: str | None = None,
         relationship_type: str | None = None,
         action: contracts.GroupAction | None = None,
         limit: int = 50,
@@ -1204,6 +1308,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         thesis_facts, trust_status, and trust_reason. Use ``action`` to filter
         by approve/reject. Use ``relationship_type`` to scope to a specific
         edge type.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_list_resolutions(
             instance_id,
@@ -1215,11 +1321,13 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_group_status(
-        instance_id: str,
+        instance_id: str | None = None,
         group_id: str | None = None,
         signature: str | None = None,
     ) -> contracts.GroupBucketStatusToolResult:
-        """Show lifecycle status for a signature bucket or concrete group."""
+        """Show lifecycle status for a signature bucket or concrete group.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_group_status(
             instance_id,
             group_id=group_id,
@@ -1228,13 +1336,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_state_publish(
-        instance_id: str,
         transport_ref: str,
         state_id: str,
         release_id: str,
         compatibility: contracts.StateCompatibility,
+        instance_id: str | None = None,
     ) -> contracts.StatePublishResult:
-        """Publish a root state instance as an immutable release bundle."""
+        """Publish a root state instance as an immutable release bundle.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_state_publish(
             instance_id,
             transport_ref,
@@ -1245,19 +1355,23 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_create_snapshot(
-        instance_id: str,
+        instance_id: str | None = None,
         label: str | None = None,
     ) -> contracts.SnapshotCreateResult:
-        """Create an immutable snapshot for the current instance."""
+        """Create an immutable snapshot for the current instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_create_snapshot(instance_id, label=label)
 
     @_tool
     def cruxible_instance_backup(
-        instance_id: str,
         artifact_path: str,
+        instance_id: str | None = None,
         label: str | None = None,
     ) -> contracts.InstanceBackupResult:
-        """Write a portable same-identity backup artifact for an instance."""
+        """Write a portable same-identity backup artifact for an instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_instance_backup(instance_id, artifact_path, label=label)
 
     @_tool
@@ -1270,11 +1384,13 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_instance_relocate(
-        instance_id: str,
         to_dir: str,
+        instance_id: str | None = None,
         remove_source: bool = False,
     ) -> contracts.InstanceRelocateResult:
-        """Move a healthy daemon-backed instance to a new directory, preserving identity."""
+        """Move a healthy daemon-backed instance to a new directory, preserving identity.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_instance_relocate(
             instance_id,
             to_dir,
@@ -1283,17 +1399,19 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_list_snapshots(
-        instance_id: str,
+        instance_id: str | None = None,
         limit: int | None = None,
         offset: int = 0,
     ) -> contracts.SnapshotListResult:
-        """List immutable snapshots for the current instance."""
+        """List immutable snapshots for the current instance.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_list_snapshots(instance_id, limit=limit, offset=offset)
 
     @_tool
     def cruxible_register_source_artifact(
-        instance_id: str,
         source_path: str,
+        instance_id: str | None = None,
         source_artifact_id: str | None = None,
         source_kind: contracts.SourceKind = "markdown",
         source_retention: contracts.SourceRetention = "manifest_only",
@@ -1306,6 +1424,8 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         locators can reference it deterministically; server-generated when
         omitted. When provided, it must be 3-64 chars of [A-Za-z0-9._-]
         starting with an alphanumeric. Duplicate ids are refused by the service.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_register_source_artifact(
             instance_id,
@@ -1319,14 +1439,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_dereference_source_evidence(
-        instance_id: str,
         source_artifact_id: str,
+        instance_id: str | None = None,
         chunk_id: str | None = None,
         heading_path: list[str] | None = None,
         block_selector: str | None = None,
         expected_content_hash: str | None = None,
     ) -> contracts.DereferenceSourceEvidenceResult:
-        """Return source text for a registered source-evidence locator."""
+        """Return source text for a registered source-evidence locator.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_dereference_source_evidence(
             instance_id,
             source_artifact_id=source_artifact_id,
@@ -1338,38 +1460,46 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_clone_snapshot(
-        instance_id: str,
         snapshot_id: str,
         root_dir: str,
+        instance_id: str | None = None,
     ) -> contracts.CloneSnapshotResult:
-        """Create a point-in-time clone from an immutable snapshot."""
+        """Create a point-in-time clone from an immutable snapshot.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_clone_snapshot(instance_id, snapshot_id, root_dir)
 
     @_tool
-    def cruxible_state_status(instance_id: str) -> contracts.StateStatusResult:
-        """Return upstream tracking metadata for a release-backed overlay."""
+    def cruxible_state_status(instance_id: str | None = None) -> contracts.StateStatusResult:
+        """Return upstream tracking metadata for a release-backed overlay.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_state_status(instance_id)
 
     @_tool
     def cruxible_state_pull_preview(
-        instance_id: str,
+        instance_id: str | None = None,
     ) -> contracts.StatePullPreviewResult:
-        """Preview pulling a newer upstream release into a release-backed overlay."""
+        """Preview pulling a newer upstream release into a release-backed overlay.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_state_pull_preview(instance_id)
 
     @_tool
     def cruxible_state_pull_apply(
-        instance_id: str,
         expected_apply_digest: str,
+        instance_id: str | None = None,
     ) -> contracts.StatePullApplyResult:
-        """Apply a previewed upstream release into a release-backed overlay."""
+        """Apply a previewed upstream release into a release-backed overlay.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_state_pull_apply(instance_id, expected_apply_digest)
 
     @_tool
     def cruxible_get_entity(
-        instance_id: str,
         entity_type: str,
         entity_id: str,
+        instance_id: str | None = None,
         profile: contracts.ReadProfile | None = None,
     ) -> contracts.GetEntityResult:
         """Look up a specific entity by type and ID. Returns properties and metadata.
@@ -1377,23 +1507,27 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
         `profile` shapes the payload: `compact` (default here) returns a
         bounded identity card with governance markers; pass `standard` or
         `full` for the complete property bag and metadata.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_get_entity(instance_id, entity_type, entity_id, profile=profile)
 
     @_tool
     def cruxible_get_relationship(
-        instance_id: str,
         from_type: str,
         from_id: str,
         relationship_type: str,
         to_type: str,
         to_id: str,
+        instance_id: str | None = None,
         edge_key: int | None = None,
     ) -> contracts.GetRelationshipResult:
         """Look up a specific relationship by its endpoints and type. Returns its properties.
 
         If multiple same-type edges exist between the same endpoints, pass edge_key
         to select a specific one. Without edge_key, raises an error if ambiguous.
+        
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
         """
         return handlers.handle_get_relationship(
             instance_id, from_type, from_id, relationship_type, to_type, to_id, edge_key
@@ -1401,15 +1535,17 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_relationship_lineage(
-        instance_id: str,
         from_type: str,
         from_id: str,
         relationship_type: str,
         to_type: str,
         to_id: str,
+        instance_id: str | None = None,
         edge_key: int | None = None,
     ) -> contracts.RelationshipLineageResult:
-        """Look up a relationship and follow group provenance when available."""
+        """Look up a relationship and follow group provenance when available.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_relationship_lineage(
             instance_id,
             from_type,
@@ -1422,13 +1558,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_entity_type_add(
-        instance_id: str,
         name: str,
+        instance_id: str | None = None,
         properties: dict[str, dict[str, Any]] | None = None,
         description: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Add a new entity type to the ontology."""
+        """Add a new entity type to the ontology.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_edit(
             instance_id, "entity_type_add",
             name=name, properties=properties, description=description,
@@ -1437,13 +1575,15 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_entity_type_update(
-        instance_id: str,
         name: str,
+        instance_id: str | None = None,
         add_properties: dict[str, dict[str, Any]] | None = None,
         set_description: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Add properties to an existing entity type."""
+        """Add properties to an existing entity type.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_edit(
             instance_id, "entity_type_update",
             name=name, add_properties=add_properties,
@@ -1452,16 +1592,18 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_relationship_add(
-        instance_id: str,
         name: str,
         from_entity: str,
         to_entity: str,
+        instance_id: str | None = None,
         cardinality: str = "many_to_many",
         description: str | None = None,
         reverse_name: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Add a new relationship between two entity types."""
+        """Add a new relationship between two entity types.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_edit(
             instance_id, "relationship_add",
             name=name, from_entity=from_entity, to_entity=to_entity,
@@ -1471,14 +1613,16 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_enum_add(
-        instance_id: str,
         name: str,
         values: list[str],
+        instance_id: str | None = None,
         ordered: bool = False,
         description: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Add a new enum vocabulary."""
+        """Add a new enum vocabulary.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_edit(
             instance_id, "enum_add",
             name=name, values=values, ordered=ordered,
@@ -1487,12 +1631,14 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_enum_value_add(
-        instance_id: str,
         name: str,
         values: list[str],
+        instance_id: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Add new values to an existing enum."""
+        """Add new values to an existing enum.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_edit(
             instance_id, "enum_value_add",
             name=name, values=values, dry_run=dry_run,
@@ -1500,9 +1646,11 @@ def register_tools(server: FastMCP, *, offload_sync_calls: bool = False) -> list
 
     @_tool
     def cruxible_ontology_describe(
-        instance_id: str,
+        instance_id: str | None = None,
     ) -> dict[str, Any]:
-        """Return a human-readable summary of the current ontology."""
+        """Return a human-readable summary of the current ontology.
+未提供 instance_id 时，自动使用 CRUXIBLE_DEFAULT_INSTANCE_ID 环境变量配置的默认实例。
+        """
         return handlers.handle_ontology_describe(instance_id)
 
 
